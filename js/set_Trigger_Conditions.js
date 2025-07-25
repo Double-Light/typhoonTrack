@@ -282,18 +282,28 @@ setTriggerConditions = function() {
     console.log("錄製 GIF");
 
     const $svgObj = $("#svgObj");
+    const $slide = $("#slide");
+    const $foreign = $("foreignObject:has(#slide)");
+
+    // === 1. 將 slide 移出到 svg 外（方便截圖）===
+    const placeholder = $("<div id='slide-placeholder'></div>");
+    $slide.before(placeholder); // 暫存原位
+    $svgObj.append($slide);     // 移到 svg 外面的容器（#svgObj）
+
+    // === 2. 開始錄製 GIF ===
     const gif = new GIF({
       workers: 2,
       quality: 10,
       width: $svgObj.width(),
       height: $svgObj.height(),
-      workerScript: "./js/gif.worker.js"
+      workerScript: "./js/gif.worker.js" // 確保這是相對路徑，不可CDN
     });
 
     const captureFrame = async () => {
       const canvas = await html2canvas($svgObj[0], {
         backgroundColor: null,
-        scale: 2
+        scale: 2,
+        useCORS: true
       });
       gif.addFrame(canvas, { delay: 100 });
     };
@@ -301,7 +311,7 @@ setTriggerConditions = function() {
     const frameCount = 30;
     for (let i = 0; i < frameCount; i++) {
       await captureFrame();
-      await new Promise(r => setTimeout(r, 100)); // 假設動畫每 100ms 有新變化
+      await new Promise(r => setTimeout(r, 100));
     }
 
     gif.on("finished", function (blob) {
@@ -313,7 +323,12 @@ setTriggerConditions = function() {
     });
 
     gif.render();
+
+    // === 3. 還原 slide 回原來 foreignObject 位置 ===
+    placeholder.before($slide);
+    placeholder.remove();
   });
+
 
 
 
