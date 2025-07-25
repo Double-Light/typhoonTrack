@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+
+  <head>
+    <meta charset="UTF-8">
+    <title>颱風路徑簡報製作網頁</title>
+
+    <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.13.1/underscore-min.js" crossorigin="anonymous"></script>     <!-- JavaScript函式庫 -->
+    <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js" crossorigin="anonymous"></script>                 <!-- jQuery -->
+    <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js" crossorigin="anonymous"></script>           <!-- jQuery UI -->
+    <!-- script type="text/javascript" src="https://momentjs.com/downloads/moment.min.js" crossorigin="anonymous"></script>                                       <!-- 時間計算 -->
+    <!--<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"></script>                                    <!-- canvas 圖表庫--> 
+    <script src="https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.min.js"></script>　　<!-- GIF --> 
+    
+    <script type="text/javascript" src="./js/underscore-min.js"></script>          <!-- JavaScript函式庫 -->
+    <script type="text/javascript" src="./js/jquery.min.js"></script>              <!-- jQuery -->
+    <script type="text/javascript" src="./js/jquery-ui.min.js"></script>           <!-- jQuery UI-Draggable -->
+    <script type="text/javascript" src="./js/moment.min.js"></script>              <!-- 時間計算 -->
+    <script type="text/javascript" src="./js/html2canvas.min.js"></script>         <!-- canvas 圖表庫 -->
+
+    <!-- 自訂JS -->
+    <script type="text/javascript" src="./js/get_Track_data.js"></script>          <!-- 讀取路徑、警報資料 -->
+    <script type="text/javascript" src="./js/get_Image_data.js"></script>          <!-- 讀取圖片資料 -->
+    <script type="text/javascript" src="./js/TrackFcst.js"></script>               <!-- 建立/更新頁面資訊 -->
+    <script type="text/javascript" src="./js/set_Trigger_Conditions.js"></script>  <!-- 觸發條件(SVG畫面拖曳縮放、slide編輯模式) -->
+    <script type="text/javascript" src="./js/Warning_Estimate.js"></script>        <!-- 重要時間點區塊與標籤 -->
+
+    <!-- 自訂CSS -->
+    <link rel="stylesheet" href="./css/style.css">
+  </head>
+
+  <body>
+    <div id="main_tab">
+      <div id="control">
+      </div>
+      <div id="TrackFcst" class="dragMode">
+        <table id="TrackFcst" style="/* width: 1200px; */">
+        </table>
+      </div>
+    </div>
+
+    <script type="text/javascript">
+      function padLeft(num, lenght) {
+        str = num.toString();
+        if (str.length >= lenght) {
+          return str;
+        } else {
+          return padLeft("0" + str, lenght);
+        }
+      };
+
+      // Element 物件
+      let currentViewBox   // $("#showDomainRange")   顯示經緯度範圍
+      let currentPoint     // $("#showLatLon")        顯示經緯度位置
+      let svg              // $("#basemap")           地圖SVG
+      let fObj             // $("#slideObject")       SVG內foreignObject，用於存放 slide shape (title、description、production、keypoint、keypoint-mark)
+
+      // 地圖原始大小(固定不變)
+      let Map_Size         // 地圖像素大小   [width,height]
+      let Map_Range        // 地圖經緯度範圍 [Lon_min,Lon_max,Lat_min,Lat_max]
+      let per_Lon          // 經度轉像素
+      let per_Lat          // 緯度轉像素
+
+      // 地圖實際大小(隨scale改變)
+      let Domain_LTWH      // SVG 像素範圍(viewBox) [min-x, min-y, width, height]
+      let Domain_Range     // SVG 經緯度範圍 [Lon_min,Lon_max,Lat_min,Lat_max]
+      let per_LonLat       // 經緯度轉像素
+
+      // 年度路徑資料、警報歷史資料
+      let AData            // 過去路徑資料
+      let FData            // 預報路徑資料
+      let WData            // 警報單資訊
+      let Warning_History  // 警報時間點歷史資訊
+      let Warning_Estimate // 警報時間點估計資訊
+
+      // 單時間點資料
+      let PData            // 路徑資料
+      let yPData           // 預報路徑資料
+      let xPData           // 過去路徑資料
+      let xWData           // 警報單內容
+      
+      let wHData           // 預報時間點前的警報歷史資料
+      let wEData           // 預報時間點前的警報預估資料
+      let Warning_Data     // 預報時間點警報時間估計資料
+
+      let trackFcst_dict   // 該年度颱風路徑預報時間(守視範圍內)
+      
+      let perHr = 8        // 路徑動畫每秒幾小時
+      let aniData          // 路徑動畫資訊
+      let aniPara
+
+      let myData           // Output Data
+      Flag_Initial = true  // 初始化狀態
+
+      /* 建立選單：年分 */
+      let Select_List = "年份：<select id='year'>"
+      /* for(var i= moment().year();i>2020;i--) {*/
+      for (var i = 2024; i > 2020; i--) {
+        Select_List += "<option value='" + i + "'>" + i + "</option>"
+      };
+      Select_List += "</select>&emsp;"
+      $("div#control").append(Select_List)
+      /* End of 建立選單：年分 */
+
+      // 讀取該年度路徑資料、警報歷史資料
+      let YYYY = $("select#year").val()
+      // get_Track_data(YYYY)
+      const Track_data = get_Track_data(YYYY);
+      AData = Track_data.AData;
+      FData = Track_data.FData;
+      WData = Track_data.WData;
+      Warning_History = Track_data.Warning_History;
+      Warning_Estimate = Track_data.Warning_Estimate;
+
+      // 初始化
+      if (Flag_Initial) {
+        // console.log("頁面初始化");
+        // 讀取該年度路徑預報資料
+        get_Track_data()
+
+        // 建立 TDTY 選單
+        gen_TDTY_List()
+
+        // 讀取該年度颱風路徑預報時間
+        get_TrackFcst_dict()
+
+        // 建立路徑預報頁面 
+        gen_TrackFcstPage()
+        
+        // 初始化觸發條件 (全螢幕切換、編輯模式)
+        setTriggerConditions()
+
+        Flag_Initial = false
+      }
+
+      // 年份變更
+      $('select#year').on('change', function() {
+        // 讀取該年度路徑預報資料
+        get_Track_data()
+
+        // TD/TY清單
+        gen_TDTY_List()
+
+        // 讀取該年度颱風路徑預報時間
+        get_TrackFcst_dict()
+
+        // 更新預報時間選單
+        gen_TrackFcst_list()
+
+        // 建立路徑預報頁面 
+        gen_TrackFcstPage()
+      });
+
+      // 颱風選單變更
+      $('select#TyList').on('change', function() {
+        // 更新預報時間選單
+        gen_TrackFcst_list()
+
+        // 建立路徑預報頁面 
+        gen_TrackFcstPage()
+      });
+
+
+      // 路徑預報時間變更
+      $('select#trackFcstList').on('change', function() {
+        // 建立路徑預報頁面 
+        gen_TrackFcstPage()
+      });
+
+      // 投影片類型變更
+      $('select#ppt_theme_type').on('change', function() {
+        // 設定投影片Div
+        setSlideDiv()
+        change_SVG_Size()
+
+        // 設定重要時間點keypoint-content
+        setKeypointContent()
+        
+        // 設定編輯模式
+        setEditModel()
+        
+      });
+
+      // 產品產製
+      $("#slide_production").click(function() {
+        myData = {};
+        // 颱風資料
+        myData['tc_info'] = {
+          'year': $("select#year").val(),
+          'cwb_td_no': $("select#TyList option:selected").attr("tdnum"),
+          'init_time': $("select#trackFcstList option:selected").val() ? moment($("select#trackFcstList option:selected").val()).format("yyyy-MM-DD HH:mm") : null,
+          'cwb_ty_no': $("select#TyList option:selected").attr("tynumname").slice(6, 8),
+          'typhoon_name': $("select#TyList option:selected").attr("tyname"),
+          'cwb_typhoon_name': $("select#TyList option:selected").attr("tychname")
+        }
+
+        // 路徑資料
+        // myData['analysis_data'] = yPData;
+        // myData['forecast_data'] = xPData;
+        myData['point_data'] = PData;
+
+        // 警報資料
+        myData['warning_data'] = []
+        $.each(Warning_Data, function(index, obj) {
+          if ($(".warning-group[name='" + obj['type'] + "'] .warning-check").prop('checked') && obj['time'] !== '') { // 有時間且勾選 --> 匯入
+            myData['warning_data'].push(obj);
+          }
+        });
+
+        // 將 warning_data 依時間先後順序重新排序(空白排後)	
+        myData['warning_data'].sort((a, b) => moment(a.time) - moment(b.time));
+
+        // myData['map_info'] = {'map_range': Map_Range, 'map_size': Map_Size}
+
+        // 範圍資料 ( Domain_Range：經緯度範圍；per_LonLat：經緯度轉像素；Domain_LTWH：裁切位置大小(未使用) )
+        myData['domain_para'] = {
+          Domain_Range,
+          per_LonLat,
+          Domain_LTWH
+        }
+
+        // 底圖 SVG Code
+        myData['basemap_svg'] = $("#basemap")[0].outerHTML
+
+        // 底圖 SVG 位置大小
+        myData['basemap_size'] = [parseInt($("#basemap").css("left"), 10), parseInt($("#basemap").css("top"), 10), parseInt($("#basemap").css("width"), 10), parseInt($("#basemap").css("height"), 10)];
+
+        // 投影片類型
+        myData['ppt_theme_type'] = $("select#ppt_theme_type option:selected").val();
+
+        // 投影片資訊(內容、位置)
+        if ($("select#ppt_theme_type option:selected").val() === 'Full_Map_1') {
+          myData['slide_info'] = {
+            'title': $("#slide-title").html(),
+            'description': $("#slide-description").html(),
+            'production': $("#slide-production div").html(),
+            'keypoint_position': [$("#keypoint").position().left, $("#keypoint").position().top]
+          }
+        } else if ($("select#ppt_theme_type option:selected").val() === 'Right_Map_1') {
+          myData['slide_info'] = {
+            'title': $("#slide-title").html().replace(/<\/p>/g, '').replace(/<p>/g, '\n').trim(),
+            'production': $("#slide-production div").html(),
+            'currInfo': {
+              'time': $('#slide-description-table td[name="curr_time"]').html(),
+              'coordinate': $('#slide-description-table td[name="curr_coordinate"]').html(),
+              'position': $('#slide-description-table td[name="curr_position"]').html(),
+              'movement': $('#slide-description-table td[name="curr_movement"]').html(),
+              'pressure': $('#slide-description-table td[name="curr_pressure"]').html(),
+              'max_wind': $('#slide-description-table td[name="curr_max_wind"]').html(),
+              'max_gust': $('#slide-description-table td[name="curr_max_gust"]').html(),
+              'R15': $('#slide-description-table td[name="curr_R15"]').html(),
+              'R25': $('#slide-description-table td[name="curr_R25"]').html()
+            }
+          }
+        }
+
+        console.log(myData)
+      })
+    </script>
+  </body>
+</html>
