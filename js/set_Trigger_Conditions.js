@@ -205,21 +205,29 @@ setTriggerConditions = function() {
 
     const $svgObj = $("#svgObj");
     const $originalSlide = $slideDiv.detach();
-    $svgObj.append($originalSlide); // 暫時移出
+    $svgObj.append($originalSlide); // 暫時移出 foreignObject，否則 html2canvas 會無法正確截圖
 
+    const svgEl = document.querySelector("svg#basemap");
     const scale = 2;
 
     try {
       if (mode === "svg") {
-        // 1. 匯出 SVG 原始碼
-        const svgEl = document.querySelector("svg#basemap");
-        const svgBlob = new Blob([svgEl.outerHTML], { type: "image/svg+xml" });
+        // ✅ 1. 匯出 SVG（包含 foreignObject）
+        const clonedSvg = svgEl.cloneNode(true);
+        // optional: 將不必要的元素隱藏/刪除
+
+        const serializer = new XMLSerializer();
+        const svgStr = serializer.serializeToString(clonedSvg);
+        const svgBlob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
+
         const link = document.createElement("a");
         link.download = "screenshot.svg";
         link.href = URL.createObjectURL(svgBlob);
         link.click();
+        URL.revokeObjectURL(link.href);
+
       } else {
-        // 2. 用 html2canvas 截圖 (foreignObject 可支援)
+        // ✅ 2. 使用 html2canvas 擷取 foreignObject 可見畫面
         const canvas = await html2canvas($svgObj[0], {
           backgroundColor: null,
           scale: scale,
@@ -255,10 +263,13 @@ setTriggerConditions = function() {
             quality: 10,
             width: canvas.width,
             height: canvas.height,
-            workerScript: "./js/gif.worker.js" // 本地檔案避免跨域
+            workerScript: "./js/gif.worker.js", // ✅ 請確認這個路徑正確且可本地訪問
           });
 
-          gif.addFrame(canvas, { delay: 1000 });
+          // ✅ 加入動畫 frame，可根據需求加入多張 canvas
+          gif.addFrame(canvas, { delay: 500 });
+          gif.addFrame(canvas, { delay: 500 }); // 測試用2張同圖
+
           gif.on("finished", (blob) => {
             const link = document.createElement("a");
             link.download = "screenshot.gif";
@@ -272,11 +283,12 @@ setTriggerConditions = function() {
       console.error("截圖錯誤：", err);
       alert("截圖發生錯誤！");
     } finally {
-      // 還原 foreignObject 結構
+      // ✅ 還原原始 foreignObject 結構
       $foreignObj.append($originalSlide);
       $("#control-panel").show();
     }
   }
+
   $("#btn_screenshot").on("click", () => captureSlide("clipboard"));
   $("#btn_download_png").on("click", () => captureSlide("png"));
   $("#btn_download_gif").on("click", () => captureSlide("gif"));
