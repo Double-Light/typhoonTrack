@@ -287,7 +287,7 @@ setTriggerConditions = function() {
       quality: 10,
       width: $svgObj.width(),
       height: $svgObj.height(),
-      workerScript: "https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js"
+      workerScript: "./js/gif.worker.js"
     });
 
     const captureFrame = async () => {
