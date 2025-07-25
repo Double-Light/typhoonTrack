@@ -281,52 +281,38 @@ setTriggerConditions = function() {
   $("#btn_download_gif").on("click", async function () {
     console.log("錄製 GIF");
 
+    const $svgObj = $("#svgObj");
     const gif = new GIF({
       workers: 2,
       quality: 10,
-      width: $("#svgObj")[0].offsetWidth,
-      height: $("#svgObj")[0].offsetHeight
+      width: $svgObj.width(),
+      height: $svgObj.height(),
+      workerScript: "https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js"
     });
 
-    const $foreignObj = $("svg#basemap foreignObject");
-    const $slideDiv = $foreignObj.find("#slide");
-    if ($slideDiv.length === 0) {
-      alert("未找到 foreignObject 中的 #slide");
-      return;
-    }
-
-    const $svgObj = $("#svgObj");
-    const $originalSlide = $slideDiv.detach();
-    $svgObj.append($originalSlide);
-
-    $("#control-panel").hide();
-
-    const frameCount = 20;  // 錄製幾幀
-    const interval = 200;   // 毫秒，間隔
-
-    for (let i = 0; i < frameCount; i++) {
-      await new Promise(resolve => setTimeout(resolve, interval));
-
+    const captureFrame = async () => {
       const canvas = await html2canvas($svgObj[0], {
         backgroundColor: null,
-        scale: 2,
-        useCORS: true
+        scale: 2
       });
+      gif.addFrame(canvas, { delay: 100 });
+    };
 
-      gif.addFrame(canvas, { delay: interval });
+    const frameCount = 30;
+    for (let i = 0; i < frameCount; i++) {
+      await captureFrame();
+      await new Promise(r => setTimeout(r, 100)); // 假設動畫每 100ms 有新變化
     }
 
-    gif.on('finished', function (blob) {
-      const link = document.createElement('a');
-      link.download = 'animation.gif';
-      link.href = URL.createObjectURL(blob);
+    gif.on("finished", function (blob) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `animation_${Date.now()}.gif`;
       link.click();
     });
 
     gif.render();
-
-    $foreignObj.append($originalSlide);
-    $("#control-panel").show();
   });
 
 
