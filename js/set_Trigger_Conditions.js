@@ -190,61 +190,11 @@ setTriggerConditions = function() {
   });
 
   // 下載
-  // 截圖至剪貼簿
-  $("#btn_screenshot").on("click", async function () {
-    console.log("SVG+foreignObject 截圖");
-    
-    $("#control-panel").hide()
-
-    const $foreignObj = $("svg#basemap foreignObject");
-    const $slideDiv = $foreignObj.find("#slide");
-
-    if ($slideDiv.length === 0) {
-      alert("未找到 foreignObject 中的 #slide");
-      return;
-    }
-
-    const $svgObj = $("#svgObj");
-
-    // 1. 移出 #slide
-    const $originalSlide = $slideDiv.detach();
-    $svgObj.append($originalSlide);  // 移到 div#svgObj 最後面
-
-    // 2. 截圖 div#svgObj（含 SVG + #slide）
-    try {
-      const canvas = await html2canvas($svgObj[0], {
-        backgroundColor: null, // 保留透明背景
-        scale: 2,              // 提高解析度
-        useCORS: true
-      });
-
-      // 3. 複製圖片到剪貼簿
-      canvas.toBlob(async (blob) => {
-        try {
-          await navigator.clipboard.write([
-            new ClipboardItem({ "image/png": blob })
-          ]);
-          alert("已複製畫面到剪貼簿！");
-        } catch (err) {
-          console.error("複製失敗：", err);
-          alert("複製失敗，請確認瀏覽器支援剪貼簿API。");
-        }
-      }, "image/png");
-    } catch (err) {
-      console.error("html2canvas 錯誤：", err);
-      alert("截圖失敗！");
-    } finally {
-      // 4. 將 #slide 放回 <foreignObject>
-      $foreignObj.append($originalSlide);
-      $("#control-panel").show()
-    }
-  });
-  
-  // 下載 PNG
-  $("#btn_download_png").on("click", async function () {
-    console.log("下載 PNG 截圖");
+  async function captureSlide(mode = "clipboard") {
+    console.log("執行截圖模式：", mode);
 
     $("#control-panel").hide();
+
     const $foreignObj = $("svg#basemap foreignObject");
     const $slideDiv = $foreignObj.find("#slide");
 
@@ -255,83 +205,82 @@ setTriggerConditions = function() {
 
     const $svgObj = $("#svgObj");
     const $originalSlide = $slideDiv.detach();
-    $svgObj.append($originalSlide);
+    $svgObj.append($originalSlide); // 暫時移出
+
+    const scale = 2;
 
     try {
-      const canvas = await html2canvas($svgObj[0], {
-        backgroundColor: null,
-        scale: 2,
-        useCORS: true
-      });
+      if (mode === "svg") {
+        // 1. 匯出 SVG 原始碼
+        const svgEl = document.querySelector("svg#basemap");
+        const svgBlob = new Blob([svgEl.outerHTML], { type: "image/svg+xml" });
+        const link = document.createElement("a");
+        link.download = "screenshot.svg";
+        link.href = URL.createObjectURL(svgBlob);
+        link.click();
+      } else {
+        // 2. 用 html2canvas 截圖 (foreignObject 可支援)
+        const canvas = await html2canvas($svgObj[0], {
+          backgroundColor: null,
+          scale: scale,
+          useCORS: true
+        });
 
-      const link = document.createElement("a");
-      link.download = "screenshot.png";
-      link.href = canvas.toDataURL("image/png");
-      link.click();
+        if (mode === "clipboard") {
+          canvas.toBlob(async (blob) => {
+            try {
+              await navigator.clipboard.write([
+                new ClipboardItem({ "image/png": blob })
+              ]);
+              alert("已複製畫面到剪貼簿！");
+            } catch (err) {
+              console.error("複製失敗：", err);
+              alert("複製失敗，請確認瀏覽器支援剪貼簿API。");
+            }
+          }, "image/png");
+        }
+
+        if (mode === "png") {
+          canvas.toBlob((blob) => {
+            const link = document.createElement("a");
+            link.download = "screenshot.png";
+            link.href = URL.createObjectURL(blob);
+            link.click();
+          }, "image/png");
+        }
+
+        if (mode === "gif") {
+          const gif = new GIF({
+            workers: 2,
+            quality: 10,
+            width: canvas.width,
+            height: canvas.height,
+            workerScript: "./js/gif.worker.js" // 本地檔案避免跨域
+          });
+
+          gif.addFrame(canvas, { delay: 1000 });
+          gif.on("finished", (blob) => {
+            const link = document.createElement("a");
+            link.download = "screenshot.gif";
+            link.href = URL.createObjectURL(blob);
+            link.click();
+          });
+          gif.render();
+        }
+      }
     } catch (err) {
-      console.error("下載 PNG 錯誤：", err);
-      alert("PNG 下載失敗！");
+      console.error("截圖錯誤：", err);
+      alert("截圖發生錯誤！");
     } finally {
+      // 還原 foreignObject 結構
       $foreignObj.append($originalSlide);
       $("#control-panel").show();
     }
-  });
-  
-  // 下載 GIF
-  $("#btn_download_gif").on("click", async function () {
-    console.log("錄製 GIF");
-
-    const $svgObj = $("#svgObj");
-    const $slide = $("#slide");
-    const $foreign = $("foreignObject:has(#slide)");
-
-    // === 1. 將 slide 移出到 svg 外（方便截圖）===
-    const placeholder = $("<div id='slide-placeholder'></div>");
-    $slide.before(placeholder); // 暫存原位
-    $svgObj.append($slide);     // 移到 svg 外面的容器（#svgObj）
-
-    // === 2. 開始錄製 GIF ===
-    const gif = new GIF({
-      workers: 2,
-      quality: 10,
-      width: $svgObj.width(),
-      height: $svgObj.height(),
-      workerScript: "./js/gif.worker.js" // 確保這是相對路徑，不可CDN
-    });
-
-    const captureFrame = async () => {
-      const canvas = await html2canvas($svgObj[0], {
-        backgroundColor: null,
-        scale: 2,
-        useCORS: true
-      });
-      gif.addFrame(canvas, { delay: 100 });
-    };
-
-    const frameCount = 30;
-    for (let i = 0; i < frameCount; i++) {
-      await captureFrame();
-      await new Promise(r => setTimeout(r, 100));
-    }
-
-    gif.on("finished", function (blob) {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `animation_${Date.now()}.gif`;
-      link.click();
-    });
-
-    gif.render();
-
-    // === 3. 還原 slide 回原來 foreignObject 位置 ===
-    placeholder.before($slide);
-    placeholder.remove();
-  });
-
-
-
-
+  }
+  $("#btn_screenshot").on("click", () => captureSlide("clipboard"));
+  $("#btn_download_png").on("click", () => captureSlide("png"));
+  $("#btn_download_gif").on("click", () => captureSlide("gif"));
+  $("#btn_download_svg").on("click", () => captureSlide("svg"));
 
   // 7. 啟用區段動畫
   // $("#keypoint-content .warning-text-Estimate").on("click", function () {
