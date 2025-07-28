@@ -276,11 +276,13 @@ setTriggerConditions = function() {
           const baseCanvas = await html2canvas(document.querySelector("#baseDiv"), {
             backgroundColor: null,
             scale: 1,
-            useCORS: true
+            useCORS: true,
+            removeContainer: true,         // 清除臨時容器節省記憶體
+            logging: false,                // 關閉 log
           });
           
           // ✅ Debug: 輸出 baseCanvas base64 圖像
-          console.log(`baseCanvas:`, baseCanvas.toDataURL());
+          // console.log(`baseCanvas:`, baseCanvas.toDataURL());
           
           $("#svgObj g#warning_range").show()
           
@@ -331,11 +333,13 @@ setTriggerConditions = function() {
             const animCanvas = await html2canvas(document.querySelector("#animDiv"), {
               backgroundColor: null,
               scale: 1,
-              useCORS: true
+              useCORS: true,
+              removeContainer: true,         // 清除臨時容器節省記憶體
+              logging: false,                // 關閉 log
             });
             
             // ✅ Debug: 輸出 animCanvas base64 圖像
-            console.log(`Frame ${frame} animCanvas:`, animCanvas.toDataURL());
+            // console.log(`Frame ${frame} animCanvas:`, animCanvas.toDataURL());
             
             // 🔧 合併三層到一個 canvas
             const mergedCanvas = document.createElement("canvas");
