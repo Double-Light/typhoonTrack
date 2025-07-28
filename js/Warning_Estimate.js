@@ -880,7 +880,7 @@ setWarningMarksSize = function(fontSize = 9) {
 
 // 建立暴風半徑動畫
 function setTcAnimate (aniType="all") {
-  $("g#warning_animate").contents().remove();
+  $("g#tc_circle").contents().remove();
   let xRadius = ""
   
   if ($("#btn_animsEnable").prop("checked")) { // 動畫模式
@@ -907,7 +907,7 @@ function setTcAnimate (aniType="all") {
     
     // let t=0
     
-    aniData = [...xPData, ...warning_data]
+    aniDatas = [...xPData, ...warning_data]
       .filter(item => item.tau >= aniStartTau && item.tau <= aniEndTau)
       .sort((a, b) => a.tau - b.tau)
       .map(item => ({
@@ -923,75 +923,75 @@ function setTcAnimate (aniType="all") {
       }));
       
     // 計算dt
-    aniData.forEach((item, i) => {
-      item.dt = i > 0 ? (item.tau - aniData[i - 1].tau) / perHr : 0;
+    aniDatas.forEach((item, i) => {
+      item.dt = i > 0 ? (item.tau - aniDatas[i - 1].tau) / perHr : 0;
     });
 
-    // console.log("aniData:", aniData);
+    // console.log("aniDatas:", aniDatas);
     
-    aniPara = {
-      "time" : aniData.map(item => item.time),
-      "tau" : aniData.map(item => item.tau),
-      "ax" : aniData.map(item => item.ax),
-      "ay" : aniData.map(item => item.ay),
-      "R15_x" : aniData.map(item => item.R15_x),
-      "R15_y" : aniData.map(item => item.R15_y),
-      "R25_x" : aniData.map(item => item.R25_x),
-      "R25_y" : aniData.map(item => item.R25_y)
+    aniParas = {
+      "time" : aniDatas.map(item => item.time),
+      "tau" : aniDatas.map(item => item.tau),
+      "ax" : aniDatas.map(item => item.ax),
+      "ay" : aniDatas.map(item => item.ay),
+      "R15_x" : aniDatas.map(item => item.R15_x),
+      "R15_y" : aniDatas.map(item => item.R15_y),
+      "R25_x" : aniDatas.map(item => item.R25_x),
+      "R25_y" : aniDatas.map(item => item.R25_y)
     }
     
     // 總時間（不含第 0 點 dt = 0）
-    const dur = aniData.reduce((sum, item) => sum + item.dt, 0);
+    const dur = aniDatas.reduce((sum, item) => sum + item.dt, 0);
 
     // 計算累積時間（keyTimes 累積）
     let cumulative = [];
-    aniData.reduce((acc, item) => {
+    aniDatas.reduce((acc, item) => {
       const sum = acc + item.dt;
       cumulative.push(sum);
       return sum;
     }, 0);
     
     // 新增 keyTimes、dur、perHr參數
-    aniPara.keyTimes = cumulative.map(x => (x / dur).toFixed(3));
-    aniPara.dur = dur;
-    aniPara.perHr = perHr;
+    aniParas.keyTimes = cumulative.map(x => (x / dur).toFixed(3));
+    aniParas.dur = dur;
+    aniParas.perHr = perHr;
     
-    // console.log("aniPara:", aniPara);
+    // console.log("aniParas:", aniParas);
     
-    let keyTimes = aniPara.keyTimes.join(";")
+    let keyTimes = aniParas.keyTimes.join(";")
     let keyTimes_color = `0;${roundTo((0-aniStartTau)/(aniEndTau-aniStartTau),3)};${roundTo((0-aniStartTau)/(aniEndTau-aniStartTau),3)};1`
     let aniAttr = `repeatCount=${aniType!="all" ? "indefinite" : "indefinite"}`
     
     xRadius = `
       <g id="g_tc_R15"> <!-- R15暴風圈 -->  
-        <ellipse id="tc_R15" cx="${aniPara.ax[0]}" cy="${aniPara.ay[0]}" rx="${aniPara.R15_x[0]}" ry="${aniPara.R15_y[0]}" stroke="#F00" fill="#FFC9C9B3" stroke-width="1.0">
-          <animate attributeName="cx" dur="${dur}" ${aniAttr} values="${aniPara.ax.join(";")}" keyTimes="${keyTimes}" />
-          <animate attributeName="cy" dur="${dur}" ${aniAttr} values="${aniPara.ay.join(";")}" keyTimes="${keyTimes}" />
-          <animate attributeName="rx" dur="${dur}" ${aniAttr} values="${aniPara.R15_x.join(";")}" keyTimes="${keyTimes}" />
-          <animate attributeName="ry" dur="${dur}" ${aniAttr} values="${aniPara.R15_y.join(";")}" keyTimes="${keyTimes}" />
+        <ellipse id="tc_R15" cx="${aniParas.ax[0]}" cy="${aniParas.ay[0]}" rx="${aniParas.R15_x[0]}" ry="${aniParas.R15_y[0]}" stroke="#F00" fill="#FFC9C9B3" stroke-width="1.0">
+          <animate attributeName="cx" dur="${dur}" ${aniAttr} values="${aniParas.ax.join(";")}" keyTimes="${keyTimes}" />
+          <animate attributeName="cy" dur="${dur}" ${aniAttr} values="${aniParas.ay.join(";")}" keyTimes="${keyTimes}" />
+          <animate attributeName="rx" dur="${dur}" ${aniAttr} values="${aniParas.R15_x.join(";")}" keyTimes="${keyTimes}" />
+          <animate attributeName="ry" dur="${dur}" ${aniAttr} values="${aniParas.R15_y.join(";")}" keyTimes="${keyTimes}" />
           ${aniStartTau<0 ? `<animate attributeName="stroke" dur="${dur}" ${aniAttr} values="#808080;#808080;#F00;#F00" keyTimes="${keyTimes_color}" />` : ''}
           ${aniStartTau<0 ? `<animate attributeName="fill" dur="${dur}" ${aniAttr} values="#FFFCE7B3;#FFFCE7B3;#FFC9C9B3;#FFC9C9B3" keyTimes="${keyTimes_color}" />` : ''}
         </ellipse>
       </g>
       <g id="g_tc_R25"> <!-- R25暴風圈 -->  
-        <ellipse id="tc_R25" cx="${aniPara.ax[0]}" cy="${aniPara.ay[0]}" rx="${aniPara.R25_x[0]}" ry="${aniPara.R25_y[0]}" fill="#FF717180" stroke-width="0">
-          <animate attributeName="cx" dur="${dur}" ${aniAttr} values="${aniPara.ax.join(";")}" keyTimes="${keyTimes}" />
-          <animate attributeName="cy" dur="${dur}" ${aniAttr} values="${aniPara.ay.join(";")}" keyTimes="${keyTimes}" />
-          <animate attributeName="rx" dur="${dur}" ${aniAttr} values="${aniPara.R25_x.join(";")}" keyTimes="${keyTimes}" />
-          <animate attributeName="ry" dur="${dur}" ${aniAttr} values="${aniPara.R25_y.join(";")}" keyTimes="${keyTimes}" />
+        <ellipse id="tc_R25" cx="${aniParas.ax[0]}" cy="${aniParas.ay[0]}" rx="${aniParas.R25_x[0]}" ry="${aniParas.R25_y[0]}" fill="#FF717180" stroke-width="0">
+          <animate attributeName="cx" dur="${dur}" ${aniAttr} values="${aniParas.ax.join(";")}" keyTimes="${keyTimes}" />
+          <animate attributeName="cy" dur="${dur}" ${aniAttr} values="${aniParas.ay.join(";")}" keyTimes="${keyTimes}" />
+          <animate attributeName="rx" dur="${dur}" ${aniAttr} values="${aniParas.R25_x.join(";")}" keyTimes="${keyTimes}" />
+          <animate attributeName="ry" dur="${dur}" ${aniAttr} values="${aniParas.R25_y.join(";")}" keyTimes="${keyTimes}" />
           ${aniStartTau<0 ? `<animate attributeName="fill" dur="${dur}" ${aniAttr} values="#f0e22480;#f0e22480;#FF717180;#FF717180" keyTimes="${keyTimes_color}" />` : ''}
         </ellipse>
       </g>
       <g id="g_tc_center"> <!-- 中心 -->  
-        <use id="tc_center" x="${aniPara.ax[0]}" y="${aniPara.ay[0]}" href="${aniStartTau < 0 ? '#tyIcon_past' : '#tyIcon_fcst'}">
-          <animate attributeName="x" dur="${dur}" ${aniAttr} values="${aniPara.ax.join(";")}" keyTimes="${keyTimes}" />
-          <animate attributeName="y" dur="${dur}" ${aniAttr} values="${aniPara.ay.join(";")}" keyTimes="${keyTimes}" />
+        <use id="tc_center" x="${aniParas.ax[0]}" y="${aniParas.ay[0]}" href="${aniStartTau < 0 ? '#tyIcon_past' : '#tyIcon_fcst'}">
+          <animate attributeName="x" dur="${dur}" ${aniAttr} values="${aniParas.ax.join(";")}" keyTimes="${keyTimes}" />
+          <animate attributeName="y" dur="${dur}" ${aniAttr} values="${aniParas.ay.join(";")}" keyTimes="${keyTimes}" />
           ${aniStartTau < 0 ? `<animate attributeName="href" dur="${dur}" ${aniAttr} values="#tyIcon_past;#tyIcon_past;#tyIcon_fcst;##tyIcon_fcst" keyTimes="${keyTimes_color}" />` : ''}
         </use>
       </g>`
   } else {  // 靜態模式
     // console.log("靜態模式")
-    let tauTime = parseFloat($("g#warning_animate").attr("tau") || 0);
+    let tauTime = parseFloat($("g#tc_circle").attr("tau") || 0);
 
     let time, ax, ay, R15_x, R15_y, R25_x, R25_y;  // 👈 提前宣告
 
@@ -1042,7 +1042,6 @@ function setTcAnimate (aniType="all") {
           $(`#keypoint .warning-text[name='${item.type}']`).addClass("active")
         }
       });
-
     } else {
       const warning = warning_data.find(item => item.type === aniType);
       if (warning) {
@@ -1057,7 +1056,7 @@ function setTcAnimate (aniType="all") {
       $(`#keypoint .warning-text[name='${aniType}']`).addClass("active")
     }
 
-    $("g#warning_animate").attr("tau", tauTime);
+    $("g#tc_circle").attr("tau", tauTime);
     xRadius = `
       <g id="g_tc_R15">
         <ellipse id="tc_R15" cx="${ax}" cy="${ay}" rx="${R15_x}" ry="${R15_y}" ${tauTime>=0 ? 'stroke="#F00" fill="#FFC9C9B3"' : 'stroke="#808080" fill="#FFFCE7B3"'} stroke-width="1.0"></ellipse>
@@ -1073,7 +1072,53 @@ function setTcAnimate (aniType="all") {
       </g>`;
   }
   
-  $("g#warning_animate").html(xRadius)
+  $("g#tc_circle").html(xRadius)
+}
+
+
+setTcCircle = function(tauTime=0) {
+  $("g#tc_circle").contents().remove();
+  let xRadius = ""
+  
+  for (let i = 1; i < PData.length; i++) {
+    const Pre = PData[i - 1];
+    const This = PData[i];
+
+    if (!((tauTime <= This.tau && tauTime > Pre.tau) || (i === 1 && tauTime === Pre.tau))) continue;
+    const delta = (tauTime - Pre.tau) / (This.tau - Pre.tau);
+    
+    time = moment(Pre.time) + (moment(This.time) - moment(Pre.time)) * delta
+    ax = roundTo(Pre.ax + (This.ax - Pre.ax) * delta, 2);
+    ay = roundTo(Pre.ay + (This.ay - Pre.ay) * delta, 2);
+    R15_x = roundTo(Pre.R15_x + (This.R15_x - Pre.R15_x) * delta, 3);
+    R15_y = roundTo(Pre.R15_y + (This.R15_y - Pre.R15_y) * delta, 3);
+    R25_x = roundTo(Pre.R25_x + (This.R25_x - Pre.R25_x) * delta, 3);
+    R25_y = roundTo(Pre.R25_y + (This.R25_y - Pre.R25_y) * delta, 3);
+    break; // ✅ 找到後就跳出
+  }
+  
+  $("#warning_marks .mark-fcst").hide()
+  $("#keypoint .warning-text").removeClass("active")
+  Warning_Data.forEach(item => {
+    if (item.tau <= tauTime && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
+      $(`#warning_marks .mark-fcst[name='${item.type}']`).show()
+    }
+  });
+  
+  $("g#tc_circle").attr("tau", tauTime);
+  xRadius = `
+    <g id="g_tc_R15">
+      <ellipse id="tc_R15" cx="${ax}" cy="${ay}" rx="${R15_x}" ry="${R15_y}" ${tauTime>=0 ? 'stroke="#F00" fill="#FFC9C9B3"' : 'stroke="#808080" fill="#FFFCE7B3"'} stroke-width="1.0"></ellipse>
+    </g>
+    <g id="g_tc_R25">
+      <ellipse id="tc_R25" cx="${ax}" cy="${ay}" rx="${R25_x}" ry="${R25_y}" ${tauTime>=0 ? 'fill="#FF717180"' : 'fill="#f0e22480"'} stroke-width="0"></ellipse>
+    </g>
+    <g id="g_tc_center">
+      <use id="tc_center" x="${ax}" y="${ay}" href="${tauTime<0 ? '#tyIcon_past' : '#tyIcon_fcst'}"></use>
+    </g>`;
+    
+  
+  $("g#tc_circle").html(xRadius)
 }
 
 

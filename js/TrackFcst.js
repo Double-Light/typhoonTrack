@@ -168,7 +168,7 @@ gen_TrackFcstPage = function() {
   $("g#pastPath").contents().remove();
   $("g#fcstPath").contents().remove();
   $("g#tc_point").contents().remove();
-  $("g#warning_animate").contents().remove();
+  $("g#tc_circle").contents().remove();
   $("g#warning_circle").contents().remove();
   $("g#warning_marks").contents().remove();
   $("div#keypoint-mark").contents().remove();

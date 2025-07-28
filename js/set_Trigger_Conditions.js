@@ -258,24 +258,50 @@ setTriggerConditions = function() {
         }
 
         if (mode === "gif") {
+          const totalDuration = aniParas.dur
+          const fps = 10;
+          const totalFrames = totalDuration * fps;
+
           const gif = new GIF({
             workers: 2,
             quality: 10,
-            width: canvas.width,
-            height: canvas.height,
-            workerScript: "./js/gif.worker.js", // ✅ 請確認這個路徑正確且可本地訪問
+            width: $svgObj.width(),
+            height: $svgObj.height(),
+            workerScript: "./js/gif.worker.js" // 確保本地可訪問
           });
 
-          // ✅ 加入動畫 frame，可根據需求加入多張 canvas
-          gif.addFrame(canvas, { delay: 500 });
-          gif.addFrame(canvas, { delay: 500 }); // 測試用2張同圖
+          for (let frame = 0; frame < totalFrames; frame++) {
+            const tau = parseFloat(frame / fps,1); // tauTime 為秒數（int）
+            
+            console.log(tau)
+            
+            // 呼叫控制暴風圈的函式
+            await setTcCircle(tau);
 
-          gif.on("finished", (blob) => {
+            // 等待 DOM 更新（可視情況調整）
+            await new Promise(r => setTimeout(r, 50));
+
+            // 擷取截圖
+            const canvas = await html2canvas($svgObj[0], {
+              backgroundColor: null,
+              scale: scale,
+              useCORS: true
+            });
+
+            gif.addFrame(canvas, { delay: 100 }); // 100ms = 10fps
+          }
+
+          gif.on("finished", function (blob) {
+            const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
-            link.download = "screenshot.gif";
-            link.href = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `typhoon_animation_${Date.now()}.gif`;
             link.click();
+
+            // 還原 foreignObject 結構
+            $foreignObj.append($originalSlide);
           });
+
           gif.render();
         }
       }
