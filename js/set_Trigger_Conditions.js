@@ -261,47 +261,41 @@ setTriggerConditions = function() {
 
         if (mode === "gif") {
           // 1. 底圖層（baseLayer）：複製 svg 並移除 warning 標記圖層
-          const $baseClone = $("svg#basemap").clone();
-          $baseClone.find("g#warning_marks, g#tc_circle, #slideObject").remove();
-          $baseClone.removeAttr("id");
+          let $svgClone = $("#basemap").clone();
+          $svgClone.find("g#warning_range, foreignObject").remove();  // 移除  warning_range、foreignObject
 
-          // 若無 width/height 屬性，會導致 canvas 為 0x0，請務必設定
-          $baseClone.attr({
-            width: $("svg#basemap").attr("width"),
-            height: $("svg#basemap").attr("height")
-          });
-          
-          console.log("$baseClone");
-          
-          const baseCanvas = await svgToCanvas($baseClone);
-          
-          console.log("$baseClone完成");
-          
-          // 2. 動畫層（animLayer）： 用新建的 臨時SVG，每幀更新 g#tc_circle, g#warning_marks 並擷取。
-          const animSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-          animSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-          animSvg.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
-          animSvg.setAttribute("viewBox", $("svg#basemap").attr("viewBox"));
-          animSvg.setAttribute("width", $("svg#basemap").attr("width"));
-          animSvg.setAttribute("height", $("svg#basemap").attr("height"));
-          animSvg.setAttribute("version", "1.1");
-          animSvg.setAttribute("id","animSvg");
-
-          $("body").append($(animSvg));
-          
-          const $animSvg = $("#animSvg"); // 可以繼續用 jQuery 包起來操作內容
-          $animSvg.css({
+          const $baseDiv = $("<div id='baseDiv'>").css({
             position: "absolute",
-            top: "-9999px"
-          });
+            top: "-9999px",
+            width: $svgObj.width(),
+            height: $svgObj.height()
+          }).append($svgClone);
 
-          // 分別 append 動畫兩個 group
-          const $gWarning = $("svg#basemap g#warning_marks").clone();
-          const $gCircle = $("svg#basemap g#tc_circle").clone();
-          $animSvg.append($gWarning).append($gCircle);
+          $("body").append($baseDiv);
           
-          console.log("$animSvgbaseClone完成");
+          const baseCanvas = await html2canvas(document.querySelector("#baseDiv"), {
+            backgroundColor: null,
+            scale: 1,
+            useCORS: true
+          });
           
+          // ✅ Debug: 輸出 baseCanvas base64 圖像
+          console.log(`baseCanvas:`, baseCanvas.toDataURL());
+          
+          $("#svgObj g#warning_range").show()
+          
+          // 2. 動畫層（animLayer）
+          $svgClone = $("#basemap").clone();
+          $svgClone.find(">g:not(#warning_range), foreignObject").remove();  // 只留下 warning_range
+          
+          const $animDiv = $("<div id='animDiv'>").css({
+            position: "absolute",
+            top: "-9999px",
+            width: $svgObj.width(),
+            height: $svgObj.height()
+          }).append($svgClone);  
+
+          $("body").append($animDiv);
           
           // 3. 標題層（topLayer），擷取 silde（HTML文字區）
           const topCanvas = await html2canvas($("#slide")[0], {
@@ -311,8 +305,6 @@ setTriggerConditions = function() {
             removeContainer: true,         // 清除臨時容器節省記憶體
             logging: false,                // 關閉 log
           });
-          
-          console.log("$topCanvas完成");
           
           // 4. 逐幀截圖動畫層（animLayer），並合併三層到一個 canvas
           const totalDuration = aniParas.dur || 60; // 動畫總秒數
@@ -326,18 +318,25 @@ setTriggerConditions = function() {
             height: $svgObj.height(),
             workerScript: "./js/gif.worker.js" // 確保本地可訪問
           });
-
+          
           for (let frame = 0; frame < totalFrames; frame++) {
             const tau = parseFloat((frame * perHr / fps).toFixed(1)); //  tauTime 精確控制小數點一位
             // console.log(tau)
             
             // 呼叫控制暴風圈的函式
-            await setTcCircle(tau,$animSvg);
+            await setTcCircle(tau,$("#animDiv>svg"));
             await new Promise(requestAnimationFrame); // 不等畫面顯示
 
             // 立即擷取畫面，不等待
-            const animCanvas = await svgToCanvas($animSvg);
-
+            const animCanvas = await html2canvas(document.querySelector("#animDiv"), {
+              backgroundColor: null,
+              scale: 1,
+              useCORS: true
+            });
+            
+            // ✅ Debug: 輸出 animCanvas base64 圖像
+            console.log(`Frame ${frame} animCanvas:`, animCanvas.toDataURL());
+            
             // 🔧 合併三層到一個 canvas
             const mergedCanvas = document.createElement("canvas");
             mergedCanvas.width = baseCanvas.width;
@@ -361,7 +360,8 @@ setTriggerConditions = function() {
             // 還原 foreignObject 結構
             $foreignObj.append($originalSlide);
             
-            // $animSvg.remove()
+            $baseDiv.remove()
+            $animDiv.remove()
           });
 
           gif.render();
@@ -374,28 +374,6 @@ setTriggerConditions = function() {
       // ✅ 還原原始 foreignObject 結構
       $foreignObj.append($originalSlide);
       $("#control-panel").show();
-    }
-    
-    function svgToCanvas($svg) {
-      return new Promise((resolve, reject) => {
-        const svgString = new XMLSerializer().serializeToString($svg[0]);
-        
-        console.log(img.width, $svg.attr("width"));
-
-        const img = new Image();
-        img.crossOrigin = "anonymous"; // 若 SVG 裡有圖片
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.width || $svg.attr("width");
-          canvas.height = img.height || $svg.attr("height");
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0);
-          resolve(canvas);
-        };
-        img.onerror = (e) => reject(new Error("無法載入 SVG 為圖片"));
-
-        img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgString);
-      });
     }
   }
 
