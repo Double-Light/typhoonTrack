@@ -323,7 +323,7 @@ setTriggerConditions = function() {
           
           for (let frame = 0; frame <= totalFrames; frame++) {
             const tau = parseInt((frame * perHr / fps)); //  tauTime 精確控制小數點一位
-            console.log(tau)
+            // console.log(tau)
             
             // 呼叫控制暴風圈的函式
             await setTcCircle(tau,$("#animDiv>svg"));
@@ -347,9 +347,10 @@ setTriggerConditions = function() {
             mergedCanvas.height = baseCanvas.height*scale;
             const ctx = mergedCanvas.getContext("2d");
 
-            ctx.drawImage(baseCanvas, 0, 0);
-            ctx.drawImage(animCanvas, 0, 0);
-            ctx.drawImage(topCanvas, 0, 0);
+            // 將各圖層放大後合成
+            ctx.drawImage(baseCanvas, 0, 0, mergedCanvas.width, mergedCanvas.height);
+            ctx.drawImage(animCanvas, 0, 0, mergedCanvas.width, mergedCanvas.height);
+            ctx.drawImage(topCanvas, 0, 0, mergedCanvas.width, mergedCanvas.height);
 
             gif.addFrame(mergedCanvas, { delay: 1000 / fps });
           }
