@@ -258,8 +258,8 @@ setTriggerConditions = function() {
         }
 
         if (mode === "gif") {
-          const totalDuration = aniParas.dur
-          const fps = 10;
+          const totalDuration = aniParas.dur || 60; // 動畫總秒數
+          const fps = 8;
           const totalFrames = totalDuration * fps;
 
           const gif = new GIF({
@@ -271,7 +271,7 @@ setTriggerConditions = function() {
           });
 
           for (let frame = 0; frame < totalFrames; frame++) {
-            const tau = parseFloat((frame / fps).toFixed(1)); //  tauTime 為秒數，精確控制小數點一位
+            const tau = parseFloat((frame * perHr / fps).toFixed(1)); //  tauTime 精確控制小數點一位
             
             console.log(tau)
             
