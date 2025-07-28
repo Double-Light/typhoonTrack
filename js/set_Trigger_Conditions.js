@@ -271,24 +271,21 @@ setTriggerConditions = function() {
           });
 
           for (let frame = 0; frame < totalFrames; frame++) {
-            const tau = parseFloat(frame / fps,1); // tauTime 為秒數（int）
+            const tau = parseFloat((frame / fps).toFixed(1)); //  tauTime 為秒數，精確控制小數點一位
             
             console.log(tau)
             
             // 呼叫控制暴風圈的函式
             await setTcCircle(tau);
 
-            // 等待 DOM 更新（可視情況調整）
-            await new Promise(r => setTimeout(r, 50));
-
-            // 擷取截圖
+            // 立即擷取畫面，不等待
             const canvas = await html2canvas($svgObj[0], {
               backgroundColor: null,
-              scale: scale,
+              scale: 1, // 🔧 改為 scale: 1 避免只擷取 1/4 畫面
               useCORS: true
             });
 
-            gif.addFrame(canvas, { delay: 100 }); // 100ms = 10fps
+            gif.addFrame(canvas, { delay: 1000/fps }); // 100ms = 10fps
           }
 
           gif.on("finished", function (blob) {
