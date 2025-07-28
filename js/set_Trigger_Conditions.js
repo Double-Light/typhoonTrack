@@ -278,10 +278,9 @@ setTriggerConditions = function() {
           console.log("$baseClone完成");
           
           // 2. 動畫層（animLayer）： 用新建的 臨時SVG，每幀更新 g#tc_circle, g#warning_marks 並擷取。
-          const svgNS = "http://www.w3.org/2000/svg";
-
-          const animSvg = document.createElementNS(svgNS, "svg");
-          animSvg.setAttribute("xmlns", svgNS);
+          const animSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          animSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+          animSvg.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
           animSvg.setAttribute("viewBox", $("svg#basemap").attr("viewBox"));
           animSvg.setAttribute("width", $("svg#basemap").attr("width"));
           animSvg.setAttribute("height", $("svg#basemap").attr("height"));
@@ -380,6 +379,8 @@ setTriggerConditions = function() {
     function svgToCanvas($svg) {
       return new Promise((resolve, reject) => {
         const svgString = new XMLSerializer().serializeToString($svg[0]);
+        
+        console.log($svg.attr("id"), img.width, $svg.attr("width"))
 
         const img = new Image();
         img.crossOrigin = "anonymous"; // 若 SVG 裡有圖片
