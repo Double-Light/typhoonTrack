@@ -343,14 +343,14 @@ setTriggerConditions = function() {
             
             // 🔧 合併三層到一個 canvas
             const mergedCanvas = document.createElement("canvas");
-            mergedCanvas.width = baseCanvas.width*scale;
-            mergedCanvas.height = baseCanvas.height*scale;
+            mergedCanvas.width = baseCanvas.width/scale;
+            mergedCanvas.height = baseCanvas.height/scale;
             const ctx = mergedCanvas.getContext("2d");
 
             // 將各圖層放大後合成
-            ctx.drawImage(baseCanvas, 0, 0, mergedCanvas.width, mergedCanvas.height);
-            ctx.drawImage(animCanvas, 0, 0, mergedCanvas.width, mergedCanvas.height);
-            ctx.drawImage(topCanvas, 0, 0, mergedCanvas.width, mergedCanvas.height);
+            ctx.drawImage(baseCanvas, 0, 0);
+            ctx.drawImage(animCanvas, 0, 0);
+            ctx.drawImage(topCanvas, 0, 0);
 
             gif.addFrame(mergedCanvas, { delay: 1000 / fps });
           }
