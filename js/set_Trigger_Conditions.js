@@ -276,14 +276,17 @@ setTriggerConditions = function() {
           $baseClone.remove();
           
           // 2. 動畫層（animLayer）： 用新建的 臨時SVG，每幀更新 g#tc_circle, g#warning_marks 並擷取。
-          const $animSvg = $("<svg>")
-            .attr({
-              xmlns: "http://www.w3.org/2000/svg",
-              viewBox: $("svg#basemap").attr("viewBox"),
-              width: $("svg#basemap").attr("width"),
-              height: $("svg#basemap").attr("height")
-            })
-            .css({ position: "absolute", top: "-9999px" });
+          const svgNS = "http://www.w3.org/2000/svg";
+
+          const animSvg = document.createElementNS(svgNS, "svg");
+          animSvg.setAttribute("xmlns", svgNS);
+          animSvg.setAttribute("viewBox", $("svg#basemap").attr("viewBox"));
+          animSvg.setAttribute("width", $("svg#basemap").attr("width"));
+          animSvg.setAttribute("height", $("svg#basemap").attr("height"));
+          animSvg.setAttribute("version", "1.1");
+
+          // 可以繼續用 jQuery 包起來操作內容
+          const $animSvg = $(animSvg);
 
           $("body").append($animSvg);
 
