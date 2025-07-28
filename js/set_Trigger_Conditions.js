@@ -258,6 +258,49 @@ setTriggerConditions = function() {
         }
 
         if (mode === "gif") {
+          // 1. 底圖層（baseLayer）：複製 svg 並移除 warning 標記圖層
+          const $baseClone = $("svg#basemap").clone();
+          $baseClone.find("g#warning_marks, g#tc_circle").remove();
+
+          // 隱藏於畫面外避免干擾
+          $baseClone.css({ position: "absolute", top: "-9999px" });
+          $("body").append($baseClone);
+
+          const baseCanvas = await html2canvas($baseClone[0], {
+            backgroundColor: null,
+            scale: 1,
+            useCORS: true
+          });
+
+          // 移除
+          $baseClone.remove();
+          
+          // 2. 動畫層（animLayer）： 用新建的 臨時SVG，每幀更新 g#tc_circle, g#warning_marks 並擷取。
+          const $animSvg = $("<svg>")
+            .attr({
+              xmlns: "http://www.w3.org/2000/svg",
+              viewBox: $("svg#basemap").attr("viewBox"),
+              width: $("svg#basemap").attr("width"),
+              height: $("svg#basemap").attr("height")
+            })
+            .css({ position: "absolute", top: "-9999px" });
+
+          $("body").append($animSvg);
+
+          // 分別 append 動畫兩個 group
+          const $gWarning = $("svg#basemap g#warning_marks").clone();
+          const $gCircle = $("svg#basemap g#tc_circle").clone();
+          $animSvg.append($gWarning).append($gCircle);
+          
+          
+          // 3. 標題層（topLayer），擷取 silde（HTML文字區）
+          const topCanvas = await html2canvas($("#slideDiv")[0], {
+            backgroundColor: null,
+            scale: 1,
+            useCORS: true
+          });
+          
+          // 4. 逐幀截圖動畫層（animLayer），並合併三層到一個 canvas
           const totalDuration = aniParas.dur || 60; // 動畫總秒數
           const fps = 8;
           const totalFrames = totalDuration * fps;
@@ -276,20 +319,30 @@ setTriggerConditions = function() {
             console.log(tau)
             
             // 呼叫控制暴風圈的函式
-            await setTcCircle(tau);
+            await setTcCircle(tau,$animSvg);
             await new Promise(requestAnimationFrame); // 不等畫面顯示
 
             // 立即擷取畫面，不等待
-            const canvas = await html2canvas($svgObj[0], {
+            const animCanvas  = await html2canvas($svgObj[0], {
               backgroundColor: null,
               scale: 1, // 🔧 改為 scale: 1 避免只擷取 1/4 畫面
-              useCORS: true
+              useCORS: true,
               removeContainer: true,         // 清除臨時容器節省記憶體
               logging: false,                // 關閉 log
               foreignObjectRendering: false  // 不需要處理 <foreignObject>
             });
 
-            gif.addFrame(canvas, { delay: 1000/fps }); // 100ms = 10fps
+            // 🔧 合併三層到一個 canvas
+            const mergedCanvas = document.createElement("canvas");
+            mergedCanvas.width = baseCanvas.width;
+            mergedCanvas.height = baseCanvas.height;
+            const ctx = mergedCanvas.getContext("2d");
+
+            ctx.drawImage(baseCanvas, 0, 0);
+            ctx.drawImage(animCanvas, 0, 0);
+            ctx.drawImage(topCanvas, 0, 0);
+
+            gif.addFrame(mergedCanvas, { delay: 1000 / fps });
           }
 
           gif.on("finished", function (blob) {
