@@ -260,20 +260,20 @@ setTriggerConditions = function() {
         if (mode === "gif") {
           // 1. 底圖層（baseLayer）：複製 svg 並移除 warning 標記圖層
           const $baseClone = $("svg#basemap").clone();
-          $baseClone.find("g#warning_marks, g#tc_circle").remove();
+          $baseClone.find("g#warning_marks, g#tc_circle, #slideObject").remove();
+          $baseClone.removeAttr("id");
 
-          // 隱藏於畫面外避免干擾
-          $baseClone.css({ position: "absolute", top: "-9999px" });
-          $("body").append($baseClone);
-
-          const baseCanvas = await html2canvas($baseClone[0], {
-            backgroundColor: null,
-            scale: 1,
-            useCORS: true
+          // 若無 width/height 屬性，會導致 canvas 為 0x0，請務必設定
+          $baseClone.attr({
+            width: $("svg#basemap").attr("width"),
+            height: $("svg#basemap").attr("height")
           });
-
-          // 移除
-          $baseClone.remove();
+          
+          console.log("$baseClone");
+          
+          const baseCanvas = await svgToCanvas($baseClone);
+          
+          console.log("$baseClone完成");
           
           // 2. 動畫層（animLayer）： 用新建的 臨時SVG，每幀更新 g#tc_circle, g#warning_marks 並擷取。
           const svgNS = "http://www.w3.org/2000/svg";
@@ -295,13 +295,17 @@ setTriggerConditions = function() {
           const $gCircle = $("svg#basemap g#tc_circle").clone();
           $animSvg.append($gWarning).append($gCircle);
           
+          console.log("$animSvgbaseClone完成");
+          
           
           // 3. 標題層（topLayer），擷取 silde（HTML文字區）
-          const topCanvas = await html2canvas($("#slideDiv")[0], {
+          const topCanvas = await html2canvas($("#slide")[0], {
             backgroundColor: null,
             scale: 1,
             useCORS: true
           });
+          
+          console.log("$topCanvas完成");
           
           // 4. 逐幀截圖動畫層（animLayer），並合併三層到一個 canvas
           const totalDuration = aniParas.dur || 60; // 動畫總秒數
@@ -369,6 +373,26 @@ setTriggerConditions = function() {
       // ✅ 還原原始 foreignObject 結構
       $foreignObj.append($originalSlide);
       $("#control-panel").show();
+    }
+    
+    function svgToCanvas($svg) {
+      return new Promise((resolve, reject) => {
+        const svgString = new XMLSerializer().serializeToString($svg[0]);
+
+        const img = new Image();
+        img.crossOrigin = "anonymous"; // 若 SVG 裡有圖片
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width || $svg.attr("width");
+          canvas.height = img.height || $svg.attr("height");
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas);
+        };
+        img.onerror = (e) => reject(new Error("無法載入 SVG 為圖片"));
+
+        img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgString);
+      });
     }
   }
 

@@ -1076,8 +1076,8 @@ function setTcAnimate (aniType="all") {
 }
 
 
-setTcCircle = function(tauTime=0) {
-  $("g#tc_circle").contents().remove();
+setTcCircle = function(tauTime=0 ,$svg=$("svg#basemap")) {
+  $svg.find("g#tc_circle").contents().remove();
   let xRadius = ""
   
   for (let i = 1; i < PData.length; i++) {
@@ -1097,15 +1097,14 @@ setTcCircle = function(tauTime=0) {
     break; // ✅ 找到後就跳出
   }
   
-  $("#warning_marks .mark-fcst").hide()
-  $("#keypoint .warning-text").removeClass("active")
+  $svg.find("#warning_marks .mark-fcst").hide()
+  $svg.find("#keypoint .warning-text").removeClass("active")
   Warning_Data.forEach(item => {
     if (item.tau <= tauTime && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
-      $(`#warning_marks .mark-fcst[name='${item.type}']`).show()
+      $svg.find(`#warning_marks .mark-fcst[name='${item.type}']`).show()
     }
   });
   
-  $("g#tc_circle").attr("tau", tauTime);
   xRadius = `
     <g id="g_tc_R15">
       <ellipse id="tc_R15" cx="${ax}" cy="${ay}" rx="${R15_x}" ry="${R15_y}" ${tauTime>=0 ? 'stroke="#F00" fill="#FFC9C9B3"' : 'stroke="#808080" fill="#FFFCE7B3"'} stroke-width="1.0"></ellipse>
@@ -1117,8 +1116,7 @@ setTcCircle = function(tauTime=0) {
       <use id="tc_center" x="${ax}" y="${ay}" href="${tauTime<0 ? '#tyIcon_past' : '#tyIcon_fcst'}"></use>
     </g>`;
     
-  
-  $("g#tc_circle").html(xRadius)
+  $svg.find("g#tc_circle").html(xRadius)
 }
 
 
