@@ -330,7 +330,7 @@ setTriggerConditions = function() {
             await new Promise(requestAnimationFrame); // 不等畫面顯示
 
             // 立即擷取畫面，不等待
-            const animCanvas  = await html2canvas($svgObj[0], {
+            const animCanvas  = await html2canvas($animSvg[0], {
               backgroundColor: null,
               scale: 1, // 🔧 改為 scale: 1 避免只擷取 1/4 畫面
               useCORS: true,
@@ -345,7 +345,7 @@ setTriggerConditions = function() {
             mergedCanvas.height = baseCanvas.height;
             const ctx = mergedCanvas.getContext("2d");
 
-            // ctx.drawImage(baseCanvas, 0, 0);
+            ctx.drawImage(baseCanvas, 0, 0);
             ctx.drawImage(animCanvas, 0, 0);
             ctx.drawImage(topCanvas, 0, 0);
 
