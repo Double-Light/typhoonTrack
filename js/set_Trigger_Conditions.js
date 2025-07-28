@@ -231,7 +231,9 @@ setTriggerConditions = function() {
         const canvas = await html2canvas($svgObj[0], {
           backgroundColor: null,
           scale: scale,
-          useCORS: true
+          useCORS: true,
+          removeContainer: true,         // 清除臨時容器節省記憶體
+          logging: false,                // 關閉 log
         });
 
         if (mode === "clipboard") {
@@ -284,11 +286,15 @@ setTriggerConditions = function() {
           animSvg.setAttribute("width", $("svg#basemap").attr("width"));
           animSvg.setAttribute("height", $("svg#basemap").attr("height"));
           animSvg.setAttribute("version", "1.1");
+          animSvg.setAttribute("id","animSvg");
 
-          // 可以繼續用 jQuery 包起來操作內容
-          const $animSvg = $(animSvg);
-
-          $("body").append($animSvg);
+          $("body").append($(animSvg));
+          
+          const $animSvg = $("#animSvg"); // 可以繼續用 jQuery 包起來操作內容
+          $animSvg.css({
+            position: "absolute",
+            top: "-9999px"
+          });
 
           // 分別 append 動畫兩個 group
           const $gWarning = $("svg#basemap g#warning_marks").clone();
@@ -302,7 +308,9 @@ setTriggerConditions = function() {
           const topCanvas = await html2canvas($("#slide")[0], {
             backgroundColor: null,
             scale: 1,
-            useCORS: true
+            useCORS: true,
+            removeContainer: true,         // 清除臨時容器節省記憶體
+            logging: false,                // 關閉 log
           });
           
           console.log("$topCanvas完成");
@@ -322,22 +330,14 @@ setTriggerConditions = function() {
 
           for (let frame = 0; frame < totalFrames; frame++) {
             const tau = parseFloat((frame * perHr / fps).toFixed(1)); //  tauTime 精確控制小數點一位
-            
-            console.log(tau)
+            // console.log(tau)
             
             // 呼叫控制暴風圈的函式
             await setTcCircle(tau,$animSvg);
             await new Promise(requestAnimationFrame); // 不等畫面顯示
 
             // 立即擷取畫面，不等待
-            const animCanvas  = await html2canvas($animSvg[0], {
-              backgroundColor: null,
-              scale: 1, // 🔧 改為 scale: 1 避免只擷取 1/4 畫面
-              useCORS: true,
-              removeContainer: true,         // 清除臨時容器節省記憶體
-              logging: false,                // 關閉 log
-              foreignObjectRendering: false  // 不需要處理 <foreignObject>
-            });
+            const animCanvas = await svgToCanvas($animSvg);
 
             // 🔧 合併三層到一個 canvas
             const mergedCanvas = document.createElement("canvas");
@@ -347,7 +347,7 @@ setTriggerConditions = function() {
 
             ctx.drawImage(baseCanvas, 0, 0);
             ctx.drawImage(animCanvas, 0, 0);
-            ctx.drawImage(topCanvas, 0, 0);
+            // ctx.drawImage(topCanvas, 0, 0);
 
             gif.addFrame(mergedCanvas, { delay: 1000 / fps });
           }
@@ -361,6 +361,8 @@ setTriggerConditions = function() {
 
             // 還原 foreignObject 結構
             $foreignObj.append($originalSlide);
+            
+            $animSvg.remove()
           });
 
           gif.render();
