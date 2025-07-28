@@ -321,9 +321,9 @@ setTriggerConditions = function() {
             workerScript: "./js/gif.worker.js" // 確保本地可訪問
           });
           
-          for (let frame = 0; frame < totalFrames; frame++) {
-            const tau = parseFloat((frame * perHr / fps).toFixed(1)); //  tauTime 精確控制小數點一位
-            // console.log(tau)
+          for (let frame = 0; frame <= totalFrames; frame++) {
+            const tau = parseInt((frame * perHr / fps)); //  tauTime 精確控制小數點一位
+            console.log(tau)
             
             // 呼叫控制暴風圈的函式
             await setTcCircle(tau,$("#animDiv>svg"));
