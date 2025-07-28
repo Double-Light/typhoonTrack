@@ -345,7 +345,7 @@ setTriggerConditions = function() {
             mergedCanvas.height = baseCanvas.height;
             const ctx = mergedCanvas.getContext("2d");
 
-            ctx.drawImage(baseCanvas, 0, 0);
+            // ctx.drawImage(baseCanvas, 0, 0);
             ctx.drawImage(animCanvas, 0, 0);
             ctx.drawImage(topCanvas, 0, 0);
 
