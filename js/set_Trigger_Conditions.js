@@ -208,7 +208,7 @@ setTriggerConditions = function() {
     $svgObj.append($originalSlide); // 暫時移出 foreignObject，否則 html2canvas 會無法正確截圖
 
     const svgEl = document.querySelector("svg#basemap");
-    const scale = 2;
+    const scaleFactor = 2;
 
     try {
       if (mode === "svg") {
@@ -230,7 +230,7 @@ setTriggerConditions = function() {
         // ✅ 2. 使用 html2canvas 擷取 foreignObject 可見畫面
         const canvas = await html2canvas($svgObj[0], {
           backgroundColor: null,
-          scale: scale,
+          scale: scaleFactor,
           useCORS: true,
           removeContainer: true,         // 清除臨時容器節省記憶體
           logging: false,                // 關閉 log
@@ -275,7 +275,7 @@ setTriggerConditions = function() {
           
           const baseCanvas = await html2canvas(document.querySelector("#baseDiv"), {
             backgroundColor: null,
-            scale: scale,
+            scale: scaleFactor,
             useCORS: true,
             removeContainer: true,         // 清除臨時容器節省記憶體
             logging: false,                // 關閉 log
@@ -302,7 +302,7 @@ setTriggerConditions = function() {
           // 3. 標題層（topLayer），擷取 silde（HTML文字區）
           const topCanvas = await html2canvas($("#slide")[0], {
             backgroundColor: null,
-            scale: scale,
+            scale: scaleFactor,
             useCORS: true,
             removeContainer: true,         // 清除臨時容器節省記憶體
             logging: false,                // 關閉 log
@@ -332,7 +332,7 @@ setTriggerConditions = function() {
             // 立即擷取畫面，不等待
             const animCanvas = await html2canvas(document.querySelector("#animDiv"), {
               backgroundColor: null,
-              scale: scale,
+              scale: scaleFactor,
               useCORS: true,
               removeContainer: true,         // 清除臨時容器節省記憶體
               logging: false,                // 關閉 log
@@ -341,10 +341,12 @@ setTriggerConditions = function() {
             // ✅ Debug: 輸出 animCanvas base64 圖像
             // console.log(`Frame ${frame} animCanvas:`, animCanvas.toDataURL());
             
+            console.log(baseCanvas.width,animCanvas.width);
+            
             // 🔧 合併三層到一個 canvas
             const mergedCanvas = document.createElement("canvas");
-            mergedCanvas.width = baseCanvas.width/scale;
-            mergedCanvas.height = baseCanvas.height/scale;
+            mergedCanvas.width = baseCanvas.width;
+            mergedCanvas.height = baseCanvas.height;
             const ctx = mergedCanvas.getContext("2d");
 
             // 將各圖層放大後合成
