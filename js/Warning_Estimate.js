@@ -1068,7 +1068,7 @@ function setTcAnimate (aniType="all") {
         <use id="tc_center" x="${ax}" y="${ay}" href="${tauTime<0 ? '#tyIcon_past' : '#tyIcon_fcst'}"></use>
       </g>
       <g id="g_tc_timestr" style="transform: translate(${R15_x*0.25}px, ${R15_y*0.25}px);">
-        <text x="${ax}" y="${ay}" style="font-size: ${parseFloat(parseInt($("#warning_marks").css("font-size"))*0.752)};"><tspan>${moment(time).format('DD日HH時mm分').replace("00分", "")}</tspan></text>
+        <text x="${ax}" y="${ay}" style="font-size: ${parseFloat(parseInt($("#warning_marks").css("font-size"))*0.75,2)}px;"><tspan>${moment(time).format('DD日HH時mm分').replace("00分", "")}</tspan></text>
       </g>`;
   }
   
