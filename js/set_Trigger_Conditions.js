@@ -277,12 +277,16 @@ setTriggerConditions = function() {
             
             // 呼叫控制暴風圈的函式
             await setTcCircle(tau);
+            await new Promise(requestAnimationFrame); // 不等畫面顯示
 
             // 立即擷取畫面，不等待
             const canvas = await html2canvas($svgObj[0], {
               backgroundColor: null,
               scale: 1, // 🔧 改為 scale: 1 避免只擷取 1/4 畫面
               useCORS: true
+              removeContainer: true,         // 清除臨時容器節省記憶體
+              logging: false,                // 關閉 log
+              foreignObjectRendering: false  // 不需要處理 <foreignObject>
             });
 
             gif.addFrame(canvas, { delay: 1000/fps }); // 100ms = 10fps
