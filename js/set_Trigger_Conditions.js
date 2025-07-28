@@ -347,7 +347,7 @@ setTriggerConditions = function() {
 
             ctx.drawImage(baseCanvas, 0, 0);
             ctx.drawImage(animCanvas, 0, 0);
-            // ctx.drawImage(topCanvas, 0, 0);
+            ctx.drawImage(topCanvas, 0, 0);
 
             gif.addFrame(mergedCanvas, { delay: 1000 / fps });
           }
@@ -362,7 +362,7 @@ setTriggerConditions = function() {
             // 還原 foreignObject 結構
             $foreignObj.append($originalSlide);
             
-            $animSvg.remove()
+            // $animSvg.remove()
           });
 
           gif.render();
