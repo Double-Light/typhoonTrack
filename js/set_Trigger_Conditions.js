@@ -316,8 +316,8 @@ setTriggerConditions = function() {
           const gif = new GIF({
             workers: 2,
             quality: 1,
-            width: $svgObj.width(),
-            height: $svgObj.height(),
+            width: baseCanvas.width,
+            height: baseCanvas.height,
             workerScript: "./js/gif.worker.js" // 確保本地可訪問
           });
           
@@ -341,7 +341,7 @@ setTriggerConditions = function() {
             // ✅ Debug: 輸出 animCanvas base64 圖像
             // console.log(`Frame ${frame} animCanvas:`, animCanvas.toDataURL());
             
-            console.log(baseCanvas.width,animCanvas.width);
+            // console.log(baseCanvas.width,animCanvas.width);
             
             // 🔧 合併三層到一個 canvas
             const mergedCanvas = document.createElement("canvas");
