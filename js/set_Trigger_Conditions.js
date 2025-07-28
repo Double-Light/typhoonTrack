@@ -275,7 +275,7 @@ setTriggerConditions = function() {
           
           const baseCanvas = await html2canvas(document.querySelector("#baseDiv"), {
             backgroundColor: null,
-            scale: 1,
+            scale: scale,
             useCORS: true,
             removeContainer: true,         // 清除臨時容器節省記憶體
             logging: false,                // 關閉 log
@@ -302,7 +302,7 @@ setTriggerConditions = function() {
           // 3. 標題層（topLayer），擷取 silde（HTML文字區）
           const topCanvas = await html2canvas($("#slide")[0], {
             backgroundColor: null,
-            scale: 1,
+            scale: scale,
             useCORS: true,
             removeContainer: true,         // 清除臨時容器節省記憶體
             logging: false,                // 關閉 log
@@ -315,7 +315,7 @@ setTriggerConditions = function() {
 
           const gif = new GIF({
             workers: 2,
-            quality: 10,
+            quality: 1,
             width: $svgObj.width(),
             height: $svgObj.height(),
             workerScript: "./js/gif.worker.js" // 確保本地可訪問
@@ -332,7 +332,7 @@ setTriggerConditions = function() {
             // 立即擷取畫面，不等待
             const animCanvas = await html2canvas(document.querySelector("#animDiv"), {
               backgroundColor: null,
-              scale: 1,
+              scale: scale,
               useCORS: true,
               removeContainer: true,         // 清除臨時容器節省記憶體
               logging: false,                // 關閉 log
