@@ -380,7 +380,7 @@ setTriggerConditions = function() {
       return new Promise((resolve, reject) => {
         const svgString = new XMLSerializer().serializeToString($svg[0]);
         
-        console.log($svg.attr("id"), img.width, $svg.attr("width"))
+        console.log(img.width, $svg.attr("width"));
 
         const img = new Image();
         img.crossOrigin = "anonymous"; // 若 SVG 裡有圖片
