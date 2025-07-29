@@ -57,14 +57,14 @@ select {
   /*  transform: translate(0px, 0px) scale(1.2); */
 }
 
-#svgObj {
+.svgObj {
   width: 720px;
   height: 405px;
   /* border: 1px solid #f40303; */
   position: relative;
 }
 
-#basemap {
+.svgObj>svg {
   position: absolute;
 }
 
@@ -149,7 +149,7 @@ select {
 
 /* -- 右側控制欄 -- */
 /* 統一控制面板樣式 */
-#control-panel {
+#editor-panel {
   display: flex;
   /* flex-direction: column; */
   gap: 8px;
@@ -162,7 +162,7 @@ select {
 }
 
 /* 全螢幕狀態下位置與樣式 */
-.fullscreen #control-panel {
+.fullscreen #editor-panel {
   z-index: 99;
   bottom: -50px;
   transform: translate(calc(25% - 1px), calc(25% - 1px)) scale(0.5);
@@ -171,7 +171,7 @@ select {
   stroke: #FFF;
   stroke-width: 0.5px;
 }
-.fullscreen #control-panel.show {
+.fullscreen #editor-panel.show {
   bottom: 0;
 }
 .fullscreen .fullscreenHide {
@@ -179,7 +179,7 @@ select {
 }
 
 /* 統一按鈕基本樣式 */
-#control-panel button {
+#editor-panel button {
   width: 16px;
   height: 16px;
   background-repeat: no-repeat;
@@ -335,7 +335,7 @@ select {
   text-align: left;
 }
 
-#editor-panel{
+#data-panel{
   display: flex;
 }
 
@@ -416,6 +416,47 @@ select {
 .warning-group[name="warning_out_land"] .warning-text {
   color: #f44336;
 }
+
+/* 進度提示框 */
+#progressOverlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.5);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#progressBox {
+  background: white;
+  padding: 20px;
+  width: 300px;
+  height: 180px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  text-align: center;
+}
+#progressBarContainer {
+  width: 100%;
+  background: #eee;
+  height: 20px;
+  border-radius: 10px;
+  margin: 10px 0;
+  overflow: hidden;
+}
+#progressBar {
+  height: 100%;
+  width: 0%;
+  background: #4caf50;
+  transition: width 0.3s;
+}
+#progressCancelBtn, #progressDoneBtn {
+  margin: 10px 5px 0 5px;
+  padding: 5px 10px;
+}
+
 
 
 
