@@ -41,6 +41,18 @@
         </table>
       </div>
     </div>
+    
+    <div id="progressOverlay" style="display:none;">
+      <div id="progressBox">
+        <h3>動畫建立中</h3>
+        <div id="progressText">請稍候...</div>
+        <div id="progressBarContainer">
+          <div id="progressBar"></div>
+        </div>
+        <button id="progressCancelBtn">中斷</button>
+        <button id="progressDoneBtn" onclick="document.getElementById('progressOverlay').style.display='none'" style="display:none;">確認</button>
+      </div>
+    </div>
 
     <script type="text/javascript">
       function padLeft(num, lenght) {
