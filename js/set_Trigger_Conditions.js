@@ -262,7 +262,7 @@ setTriggerConditions = function() {
         }
 
         if (mode === "gif") {
-          const worker = new Worker("./js/gifWorker.js"); // ← 不加 type: "module"
+          const worker = new Worker("./js/gifWorker.js", { type: "module" });
 
           let cancelProgress = false;
 
@@ -281,19 +281,11 @@ setTriggerConditions = function() {
             $("#progressDoneBtn").show();
           });
 
-          const svgBase = $("#basemap").clone();
-          svgBase.find("g#warning_range, foreignObject").remove();
-
-          const svgAnim = $("#basemap").clone();
-          svgAnim.find(">g:not(#warning_range), foreignObject").remove();
-
-          const slideHTML = $("#slide")[0].outerHTML;
-
           worker.postMessage({
             type: "start",
-            svgBase: svgBase.prop("outerHTML"),
-            svgAnim: svgAnim.prop("outerHTML"),
-            slideHTML,
+            svgBase: $("#basemap").clone().remove("g#warning_range, foreignObject").prop("outerHTML"),
+            svgAnim: $("#basemap").clone().remove(">g:not(#warning_range), foreignObject").prop("outerHTML"),
+            slideHTML: $("#slide")[0].outerHTML,
             width: $("#basemap").width(),
             height: $("#basemap").height(),
             fps: 8,
