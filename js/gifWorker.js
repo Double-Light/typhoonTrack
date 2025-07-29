@@ -1,7 +1,9 @@
 // gifWorker.js
-import { GIF } from "./gif.js"; // 請確保 gif.js 支援 module 匯入
 
 console.log("[Worker] loaded");
+
+importScripts("./gif.js");
+
 
 self.onmessage = async (e) => {
   const { type, svgBase, svgAnim, slideHTML, width, height, fps, duration, scale } = e.data;
