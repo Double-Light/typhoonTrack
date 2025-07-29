@@ -299,7 +299,7 @@ setTriggerConditions = function() {
             fps: 8,
             duration: aniParas.dur || 60,
             scale: scaleFactor,
-          }, "*");
+          });
 
           worker.onmessage = (e) => {
             const { type, data } = e.data;
