@@ -67,7 +67,7 @@ setTriggerConditions = function() {
   // 5. 全螢幕切換、視窗變化
   const $zoom = $("#track-zoom");
   const $svgObj = $("#svgObj");
-  const $control = $("#control-panel");
+  const $control = $("#editor-panel");
 
   const baseWidth = $svgObj.innerWidth();
   const baseHeight = $svgObj.innerHeight();
@@ -189,11 +189,13 @@ setTriggerConditions = function() {
     }
   });
 
-  // 下載
+  // 7. 下載功能
   async function captureSlide(mode = "clipboard") {
     console.log("執行截圖模式：", mode);
+    
+    const tStart = performance.now();  // 記錄開始時間
 
-    $("#control-panel").hide();
+    $("#editor-panel").hide();
 
     const $foreignObj = $("svg#basemap foreignObject");
     const $slideDiv = $foreignObj.find("#slide");
@@ -260,6 +262,21 @@ setTriggerConditions = function() {
         }
 
         if (mode === "gif") {
+          let cancelProgress = false;
+          $("#progressOverlay").show();
+          $("#progressText").text("正在處理...");
+          $("#progressBar").css("width", "0%");
+          $("#progressCancelBtn").show();
+          $("#progressDoneBtn").hide();
+
+          // 中斷按鈕
+          $("#progressCancelBtn").off("click").on("click", () => {
+            cancelProgress = true;
+            $("#progressText").text("已中斷");
+            $("#progressCancelBtn").hide();
+            $("#progressDoneBtn").show();
+          });
+
           // 1. 底圖層（baseLayer）：複製 svg 並移除 warning 標記圖層
           let $svgClone = $("#basemap").clone();
           $svgClone.find("g#warning_range, foreignObject").remove();  // 移除  warning_range、foreignObject
@@ -322,6 +339,7 @@ setTriggerConditions = function() {
           });
           
           for (let frame = 0; frame <= totalFrames; frame++) {
+            if (cancelProgress) break;
             const tau = parseInt((frame * perHr / fps)); //  tauTime 精確控制小數點一位
             // console.log(tau)
             
@@ -355,23 +373,40 @@ setTriggerConditions = function() {
             ctx.drawImage(topCanvas, 0, 0);
 
             gif.addFrame(mergedCanvas, { delay: 1000 / fps });
-          }
-
-          gif.on("finished", function (blob) {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `typhoon_animation_${Date.now()}.gif`;
-            link.click();
-
-            // 還原 foreignObject 結構
-            $foreignObj.append($originalSlide);
             
-            $baseDiv.remove()
-            $animDiv.remove()
-          });
+            // ⏳ 更新進度條
+            const percent = Math.round((frame / totalFrames) * 100);
+            $("#progressBar").css("width", `${percent}%`);
+          }
+          
+          if (!cancelProgress) {
+            gif.on("finished", function (blob) {
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = `typhoon_animation_${Date.now()}.gif`;
+              link.click();
+              
+              // 計算費時
+              const tEnd = performance.now();
+              const seconds = ((tEnd - tStart) / 1000).toFixed(1);
 
-          gif.render();
+              $("#progressText").text(`下載完成，用時 ${seconds} 秒`);
+              $("#progressCancelBtn").hide();
+              $("#progressDoneBtn").show();
+
+              // 還原 foreignObject 結構
+              $foreignObj.append($originalSlide);
+              
+              $baseDiv.remove()
+              $animDiv.remove()
+            });
+
+            gif.render();
+          } else {
+            $baseDiv.remove();
+            $animDiv.remove();
+          }
         }
       }
     } catch (err) {
@@ -380,7 +415,7 @@ setTriggerConditions = function() {
     } finally {
       // ✅ 還原原始 foreignObject 結構
       $foreignObj.append($originalSlide);
-      $("#control-panel").show();
+      $("#editor-panel").show();
     }
   }
 
@@ -389,7 +424,7 @@ setTriggerConditions = function() {
   $("#btn_download_gif").on("click", () => captureSlide("gif"));
   $("#btn_download_svg").on("click", () => captureSlide("svg"));
 
-  // 7. 啟用區段動畫
+  // 8. 啟用區段動畫
   // $("#keypoint-content .warning-text-Estimate").on("click", function () {
     // console.log($(this).attr("name"))
     // setTcAnimate($(this).attr("name"))
