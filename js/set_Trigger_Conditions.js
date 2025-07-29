@@ -262,7 +262,7 @@ setTriggerConditions = function() {
         }
 
         if (mode === "gif") {
-          const worker = new Worker("./gifWorker.js");
+          const worker = new Worker("gifWorker.js");
 
           let cancelProgress = false;
 
@@ -301,7 +301,9 @@ setTriggerConditions = function() {
             scale: scaleFactor,
           });
 
+          console.log(worker)
           console.log("worker.onmessage")
+          
           worker.onmessage = (e) => {
             const { type, data } = e.data;
 
