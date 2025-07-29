@@ -107,8 +107,6 @@ setTriggerConditions = function() {
     }
   }
 
-
-
   $("#btn_fullscreen").on("click", () => {
     const el = $zoom[0];
     // console.log("#btn_fullscreen on click");
@@ -322,7 +320,7 @@ setTriggerConditions = function() {
             });
             
             // ✅ Debug: 輸出 animCanvas base64 圖像
-            console.log(`Frame ${frame} animCanvas:`, animCanvas.toDataURL());
+            // console.log(`Frame ${frame} animCanvas:`, animCanvas.toDataURL());
             
 
             gif.addFrame(animCanvas, { delay: 1000 / fps });
