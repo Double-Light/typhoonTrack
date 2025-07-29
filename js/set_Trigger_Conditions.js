@@ -262,7 +262,10 @@ setTriggerConditions = function() {
         }
 
         if (mode === "gif") {
+          const worker = new Worker("gifWorker.js", { type: "module" });
+
           let cancelProgress = false;
+
           $("#progressOverlay").show();
           $("#progressText").text("正在處理...");
           $("#progressBar").css("width", "0%");
@@ -272,138 +275,54 @@ setTriggerConditions = function() {
           // 中斷按鈕
           $("#progressCancelBtn").off("click").on("click", () => {
             cancelProgress = true;
+            worker.postMessage({ type: "cancel" });
             $("#progressText").text("已中斷");
             $("#progressCancelBtn").hide();
             $("#progressDoneBtn").show();
           });
 
-          // 1. 底圖層（baseLayer）：複製 svg 並移除 warning 標記圖層
-          let $svgClone = $("#basemap").clone();
-          $svgClone.find("g#warning_range, foreignObject").remove();  // 移除  warning_range、foreignObject
+          const svgBase = $("#basemap").clone();
+          svgBase.find("g#warning_range, foreignObject").remove();
 
-          const $baseDiv = $("<div id='baseDiv'>").css({
-            position: "absolute",
-            top: "-9999px",
-            width: $svgObj.width(),
-            height: $svgObj.height()
-          }).append($svgClone);
+          const svgAnim = $("#basemap").clone();
+          svgAnim.find(">g:not(#warning_range), foreignObject").remove();
 
-          $("body").append($baseDiv);
-          
-          const baseCanvas = await html2canvas(document.querySelector("#baseDiv"), {
-            backgroundColor: null,
+          const slideHTML = $("#slide")[0].outerHTML;
+
+          worker.postMessage({
+            type: "start",
+            svgBase: svgBase.prop("outerHTML"),
+            svgAnim: svgAnim.prop("outerHTML"),
+            slideHTML,
+            width: $("#basemap").width(),
+            height: $("#basemap").height(),
+            fps: 8,
+            duration: aniParas.dur || 60,
             scale: scaleFactor,
-            useCORS: true,
-            removeContainer: true,         // 清除臨時容器節省記憶體
-            logging: false,                // 關閉 log
-          });
-          
-          // ✅ Debug: 輸出 baseCanvas base64 圖像
-          // console.log(`baseCanvas:`, baseCanvas.toDataURL());
-          
-          $("#svgObj g#warning_range").show()
-          
-          // 2. 動畫層（animLayer）
-          $svgClone = $("#basemap").clone();
-          $svgClone.find(">g:not(#warning_range), foreignObject").remove();  // 只留下 warning_range
-          
-          const $animDiv = $("<div id='animDiv'>").css({
-            position: "absolute",
-            top: "-9999px",
-            width: $svgObj.width(),
-            height: $svgObj.height()
-          }).append($svgClone);  
+          }, "*");
 
-          $("body").append($animDiv);
-          
-          // 3. 標題層（topLayer），擷取 silde（HTML文字區）
-          const topCanvas = await html2canvas($("#slide")[0], {
-            backgroundColor: null,
-            scale: scaleFactor,
-            useCORS: true,
-            removeContainer: true,         // 清除臨時容器節省記憶體
-            logging: false,                // 關閉 log
-          });
-          
-          // 4. 逐幀截圖動畫層（animLayer），並合併三層到一個 canvas
-          const totalDuration = aniParas.dur || 60; // 動畫總秒數
-          const fps = 8;
-          const totalFrames = totalDuration * fps;
+          worker.onmessage = (e) => {
+            const { type, data } = e.data;
 
-          const gif = new GIF({
-            workers: 2,
-            quality: 1,
-            width: baseCanvas.width,
-            height: baseCanvas.height,
-            workerScript: "./js/gif.worker.js" // 確保本地可訪問
-          });
-          
-          for (let frame = 0; frame <= totalFrames; frame++) {
-            if (cancelProgress) break;
-            const tau = parseInt((frame * perHr / fps)); //  tauTime 精確控制小數點一位
-            // console.log(tau)
-            
-            // 呼叫控制暴風圈的函式
-            await setTcCircle(tau,$("#animDiv>svg"));
-            await new Promise(requestAnimationFrame); // 不等畫面顯示
+            switch (type) {
+              case "progress":
+                $("#progressBar").css("width", `${data.percent}%`);
+                break;
 
-            // 立即擷取畫面，不等待
-            const animCanvas = await html2canvas(document.querySelector("#animDiv"), {
-              backgroundColor: null,
-              scale: scaleFactor,
-              useCORS: true,
-              removeContainer: true,         // 清除臨時容器節省記憶體
-              logging: false,                // 關閉 log
-            });
-            
-            // ✅ Debug: 輸出 animCanvas base64 圖像
-            // console.log(`Frame ${frame} animCanvas:`, animCanvas.toDataURL());
-            
-            // console.log(baseCanvas.width,animCanvas.width);
-            
-            // 🔧 合併三層到一個 canvas
-            const mergedCanvas = document.createElement("canvas");
-            mergedCanvas.width = baseCanvas.width;
-            mergedCanvas.height = baseCanvas.height;
-            const ctx = mergedCanvas.getContext("2d");
+              case "done":
+                const url = URL.createObjectURL(data.blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `typhoon_animation_${Date.now()}.gif`;
+                a.click();
 
-            // 將各圖層放大後合成
-            ctx.drawImage(baseCanvas, 0, 0);
-            ctx.drawImage(animCanvas, 0, 0);
-            ctx.drawImage(topCanvas, 0, 0);
+                $("#progressText").text(`下載完成，用時 ${data.time.toFixed(1)} 秒`);
+                $("#progressCancelBtn").hide();
+                $("#progressDoneBtn").show();
+                break;
+            }
+          };
 
-            gif.addFrame(mergedCanvas, { delay: 1000 / fps });
-            
-            // ⏳ 更新進度條
-            const percent = Math.round((frame / totalFrames) * 100);
-            $("#progressBar").css("width", `${percent}%`);
-          }
-          
-          if (!cancelProgress) {
-            gif.on("finished", function (blob) {
-              const url = URL.createObjectURL(blob);
-              const link = document.createElement("a");
-              link.href = url;
-              link.download = `typhoon_animation_${Date.now()}.gif`;
-              link.click();
-              
-              // 計算費時
-              const tEnd = performance.now();
-              const seconds = ((tEnd - tStart) / 1000).toFixed(1);
-
-              $("#progressText").text(`下載完成，用時 ${seconds} 秒`);
-              $("#progressCancelBtn").hide();
-              $("#progressDoneBtn").show();
-            });
-            
-            $baseDiv.remove();
-            $animDiv.remove();
-
-            gif.render();
-          } else {
-            $baseDiv.remove();
-            $animDiv.remove();
-          }
         }
       }
     } catch (err) {
