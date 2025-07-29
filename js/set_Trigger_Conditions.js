@@ -192,29 +192,14 @@ setTriggerConditions = function() {
   // 7. 下載功能
   async function captureSlide(mode = "clipboard") {
     console.log("執行截圖模式：", mode);
-    
     const tStart = performance.now();  // 記錄開始時間
 
     $("#editor-panel").hide();
 
-    const $foreignObj = $("svg#basemap foreignObject");
-    const $slideDiv = $foreignObj.find("#slide");
-
-    if ($slideDiv.length === 0) {
-      alert("未找到 foreignObject 中的 #slide");
-      return;
-    }
-
-    const $svgObj = $("#svgObj");
-    const $originalSlide = $slideDiv.detach();
-    $svgObj.append($originalSlide); // 暫時移出 foreignObject，否則 html2canvas 會無法正確截圖
-
-    const svgEl = document.querySelector("svg#basemap");
-    const scaleFactor = 2;
-
     try {
       if (mode === "svg") {
         // ✅ 1. 匯出 SVG（包含 foreignObject）
+        const svgEl = document.querySelector("svg#basemap");
         const clonedSvg = svgEl.cloneNode(true);
         // optional: 將不必要的元素隱藏/刪除
 
@@ -228,8 +213,23 @@ setTriggerConditions = function() {
         link.click();
         URL.revokeObjectURL(link.href);
 
-      } else {
+      } else {  // html2canvas 截圖
+        const $svgObj = $("#svgObj");
+        const scaleFactor = $svgObj.hasClass('fullscreen') ? 1 : 2 ;  // 畫質放大
+      
+        // 暫時移出 foreignObject，否則 html2canvas 會無法正確截圖
+        const $foreignObj = $("svg#basemap foreignObject");
+        const $slideDiv = $foreignObj.find("#slide");
+        const $originalSlide = $slideDiv.detach();
+        $svgObj.append($originalSlide); 
+        
+        if ($slideDiv.length === 0) {
+          alert("未找到 foreignObject 中的 #slide");
+          return;
+        }
+        
         // ✅ 2. 使用 html2canvas 擷取 foreignObject 可見畫面
+        
         const canvas = await html2canvas($svgObj[0], {
           backgroundColor: null,
           scale: scaleFactor,
@@ -394,13 +394,10 @@ setTriggerConditions = function() {
               $("#progressText").text(`下載完成，用時 ${seconds} 秒`);
               $("#progressCancelBtn").hide();
               $("#progressDoneBtn").show();
-
-              // 還原 foreignObject 結構
-              $foreignObj.append($originalSlide);
-              
-              $baseDiv.remove()
-              $animDiv.remove()
             });
+            
+            $baseDiv.remove();
+            $animDiv.remove();
 
             gif.render();
           } else {
@@ -414,7 +411,7 @@ setTriggerConditions = function() {
       alert("截圖發生錯誤！");
     } finally {
       // ✅ 還原原始 foreignObject 結構
-      $foreignObj.append($originalSlide);
+      if (typeof $originalSlide == 'object') {$foreignObj.append($originalSlide)};
       $("#editor-panel").show();
     }
   }
