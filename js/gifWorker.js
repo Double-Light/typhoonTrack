@@ -1,6 +1,6 @@
 console.log("[Worker] loaded");
 
-importScripts("./js/gif.js");
+importScripts("./gif.js");
 
 self.onmessage = async (e) => {
   const msg = e.data;
