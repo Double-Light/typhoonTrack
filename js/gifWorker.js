@@ -8,7 +8,7 @@ importScripts("./gif.js");
 self.onmessage = async (e) => {
   const { type, svgBase, svgAnim, slideHTML, width, height, fps, duration, scale } = e.data;
   
-  console.log(type)
+  console.log(type);
 
   if (type === "start") {
     const totalFrames = Math.round(duration * fps);
@@ -54,7 +54,7 @@ self.onmessage = async (e) => {
   if (type === "cancel") {
     cancelRequested = true;
   }
-};
+}
 
 let cancelRequested = false;
 
