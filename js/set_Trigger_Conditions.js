@@ -262,7 +262,7 @@ setTriggerConditions = function() {
         }
 
         if (mode === "gif") {
-          const worker = new Worker("./js/gifWorker.js");
+          const worker = new Worker("./gifWorker.js");
 
           let cancelProgress = false;
 
