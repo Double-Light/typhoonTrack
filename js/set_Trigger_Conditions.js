@@ -301,12 +301,14 @@ setTriggerConditions = function() {
             scale: scaleFactor,
           });
 
+          console.log("worker.onmessage")
           worker.onmessage = (e) => {
             const { type, data } = e.data;
 
             switch (type) {
               case "progress":
                 $("#progressBar").css("width", `${data.percent}%`);
+                console.log(data.percent)
                 break;
 
               case "done":
@@ -315,6 +317,8 @@ setTriggerConditions = function() {
                 a.href = url;
                 a.download = `typhoon_animation_${Date.now()}.gif`;
                 a.click();
+                
+                console.log("下載完成")
 
                 $("#progressText").text(`下載完成，用時 ${data.time.toFixed(1)} 秒`);
                 $("#progressCancelBtn").hide();

@@ -6,6 +6,8 @@ self.onmessage = async (e) => {
     self.cancelled = true;
     return;
   }
+  
+  console.log("msg.type:", msg.type)
 
   if (msg.type !== "start") return;
 
