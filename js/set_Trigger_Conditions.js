@@ -280,11 +280,17 @@ setTriggerConditions = function() {
             $("#progressCancelBtn").hide();
             $("#progressDoneBtn").show();
           });
+          
+          const svgBase = $("#basemap").clone();
+          svgBase.find("g#warning_range, foreignObject").remove();
+          
+          const svgAnim = $("#basemap").clone();
+          svgAnim.find(">g:not(#warning_range), foreignObject").remove();
 
           worker.postMessage({
             type: "start",
-            svgBase: $("#basemap").clone().remove("g#warning_range, foreignObject").prop("outerHTML"),
-            svgAnim: $("#basemap").clone().remove(">g:not(#warning_range), foreignObject").prop("outerHTML"),
+            svgBase: svgBase.prop("outerHTML"),
+            svgAnim: svgAnim.prop("outerHTML"),
             slideHTML: $("#slide")[0].outerHTML,
             width: $("#basemap").width(),
             height: $("#basemap").height(),
