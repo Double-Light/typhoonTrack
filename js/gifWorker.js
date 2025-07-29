@@ -1,6 +1,6 @@
 console.log("[Worker] loaded");
 
-importScripts("gif.js");
+importScripts("./js/gif.js");
 
 self.onmessage = async (e) => {
   const msg = e.data;
@@ -24,7 +24,7 @@ self.onmessage = async (e) => {
     quality: 2,
     width: width * scale,
     height: height * scale,
-    workerScript: "gif.worker.js"
+    workerScript: "./js/gif.worker.js"
   });
 
   const parseSvgToCanvas = async (svgStr) => {
