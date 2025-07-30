@@ -409,9 +409,9 @@ setWarningCircle = function() {
 
       // 將 ellipse 加入序列化字串 (之後一次寫入 DOM)
       xRadius += `
-      <g class="${warning.time <= xPData[0].time ? "mark-past" : "mark-fcst"}" name="${warning.type}">
-        <ellipse cx="${ax}" cy="${ay}" rx="${R15_x}" ry="${R15_y}"/>
-        <use x="${ax}" y="${ay}" width="${iconSize}" height="${iconSize}" href="${warning.time <= xPData[0].time ? '#tyIcon_past_light' : '#tyIcon_fcst_light'}"></use>
+      <g class="${warning.time < xPData[0].time ? "mark-past" : "mark-fcst"}" name="${warning.type}">
+        <ellipse cx="${ax}" cy="${ay}" rx="${R15_x}" ry="${R15_y}" ${warning.time < xPData[0].time ? 'style="stroke: #CACACA;"' : 'style="stroke: #FFCACA;"'}/>
+        <use x="${ax}" y="${ay}" width="${iconSize}" height="${iconSize}" href="${warning.time < xPData[0].time ? '#tyIcon_past_light' : '#tyIcon_fcst_light'}"></use>
       </g>`;
 
       // 對 Warning_Data 寫回計算結果
