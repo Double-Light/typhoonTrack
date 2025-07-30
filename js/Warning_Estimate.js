@@ -675,9 +675,9 @@ setWarningMarks = function() {
     const textStartY = roundTo(labelY + (labelHeight - textHeight) / 2 + fontSize,2); // 修正基線位置
     gMarks += `
       <g class="${warning.time <= xPData[0].time ? "mark-past" : "mark-fcst"}" name="${warning.type}">
-        <line x1="${ConnX}" y1="${ConnY}" x2="${ax}" y2="${ay}" ConnectorType="${ConnectorType}"></line>
-        <rect x="${labelX}" y="${labelY}" width="${labelWidth}" height="${labelHeight}" rx="0" fill="#eee" />
-        <text x="${labelX + labelWidth / 2}" y="${textStartY}" text-anchor="middle">
+        <line x1="${ConnX}" y1="${ConnY}" x2="${ax}" y2="${ay}" ConnectorType="${ConnectorType}" ${warning.time <= xPData[0].time ? 'style="stroke:#808080;"' : 'style="stroke:#c00000;"'}></line>
+        <rect x="${labelX}" y="${labelY}" width="${labelWidth}" height="${labelHeight}" rx="0" ${warning.time <= xPData[0].time ? 'style="stroke:#808080;fill:#fffce7;"' : 'style="stroke:#c00000;fill:#ff2f2f;"'}/>
+        <text x="${labelX + labelWidth / 2}" y="${textStartY}" text-anchor="middle"  ${warning.time <= xPData[0].time ? 'style="fill: #000;"' : 'style="fill: #FFF;"'}>
           <tspan x="${labelX + labelWidth / 2}" dy="0">${timeStr}</tspan>
           <tspan x="${labelX + labelWidth / 2}" dy="${lineHeight}">${warning.text}</tspan>
         </text>
@@ -1076,7 +1076,7 @@ function setTcAnimate (aniType="all") {
 }
 
 
-setTcCircle = function(tauTime=0 ,$svg=$("svg#basemap")) {
+function setTcCircle(tauTime=0 ,$svg=$("svg#basemap")) {
   $svg.find("g#tc_circle").contents().remove();
   let xRadius = ""
   

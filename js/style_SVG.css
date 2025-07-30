@@ -1,0 +1,383 @@
+
+
+* {
+  font-family: "Arial Rounded MT Bold", "Noto Sans TC Medium", sans-serif;
+  font-weight: bold;
+  stroke-linejoin: round;
+  stroke-linecap: butt;
+}
+
+#taiwan_range {
+  display: none
+}
+
+#warning_circle ellipse {
+  display: none;
+  fill: none;
+  stroke-width: 0.5;
+}
+
+/* #warning_marks rect { */
+  /* stroke-width: 1 */
+/* } */
+
+/* #warning_marks text { */
+  /* font-size: xx-small; */
+  /* text-anchor: middle */
+/* } */
+
+/* #warning_marks line { */
+  /* stroke-width: 1 */
+/* } */
+
+/* .mark-past ellipse { */
+  /* stroke: #cacaca; */
+/* } */
+
+/* .mark-past rect { */
+  /* stroke: #808080; */
+  /* fill: #fffce7 */
+/* } */
+
+/* .mark-past text { */
+  /* fill: #000 */
+/* } */
+
+/* .mark-past line { */
+  /* stroke: #808080 */
+/* } */
+
+/* .mark-past use, */
+/* .mark-past>g { */
+  /* fill: #c2c2c2 */
+/* } */
+
+/* .mark-fcst ellipse { */
+  /* stroke: #FFCACA; */
+/* } */
+
+/* .mark-fcst rect { */
+  /* stroke: #c00000; */
+  /* fill: #ff2f2f */
+/* } */
+
+/* .mark-fcst text { */
+  /* fill: #fff */
+/* } */
+
+/* .mark-fcst line { */
+  /* stroke: #c00000 */
+/* } */
+
+/* .mark-fcst use, */
+/* .mark-fcst>g { */
+  /* fill: #ffbebe */
+/* } */
+
+#slide {
+  width: 720px;
+  height: 405px;
+  position: relative;
+}
+
+#slide[ppt_theme_type=Full_Map_1] svg {
+  position: absolute;
+  left: 0
+}
+
+#slide[ppt_theme_type=Right_Map_1] svg {
+  position: absolute;
+  left: 360px
+}
+
+#slide-background {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  background-color: rgb(255 251 218)
+}
+
+#slide-title {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 24px;
+  text-align: center
+}
+
+#slide[ppt_theme_type=Full_Map_1] #slide-title {
+  width: 100%;                       /* fallback for older browsers */
+  width: -webkit-fill-available;     /* Chrome/Safari */
+  width: -moz-available;             /* Firefox */
+  width: fill-available;             /* 新版標準提案 */
+  height: 50px;
+  line-height: 50px;
+  background-color: rgba(255, 248, 193, .6)
+}
+
+#slide[ppt_theme_type=Right_Map_1] #slide-title {
+  width: 50%;
+  height: 108px;
+  padding-top: 6px
+}
+
+#slide-title p {
+  margin: 0;
+  line-height: 36px
+}
+
+#slide[ppt_theme_type=Full_Map_1] #slide-description {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 70px;
+  width: 100%;                       /* fallback for older browsers */
+  width: -webkit-fill-available;     /* Chrome/Safari */
+  width: -moz-available;             /* Firefox */
+  width: fill-available;             /* 新版標準提案 */
+  padding: 4.25px 42.5px 0 42.5px;
+  background-color: rgba(255, 248, 193, .6);
+  text-align: justify;
+  font-size: 14px;
+  line-height: 16px
+}
+
+#slide[ppt_theme_type=Right_Map_1] #slide-description {
+  position: absolute;
+  left: 0;
+  top: 108px;
+  width: 50%;
+  height: 150px
+}
+
+#slide-background,
+#slide-description-img,
+#slide-description-table {
+  display: none
+}
+
+#slide[ppt_theme_type=Right_Map_1] #slide-background,
+#slide[ppt_theme_type=Right_Map_1] #slide-description-img,
+#slide[ppt_theme_type=Right_Map_1] #slide-description-table {
+  display: block
+}
+
+#slide-description-img {
+  position: relative
+}
+
+#slide-description #slide-description-img img {
+  position: absolute;
+  display: block;
+  width: 241.5px;
+  height: 126.5px;
+  margin-left: 25px;
+  margin: 12px 0 12px 17px
+}
+
+#slide-description #slide-description-table {
+  margin: 6px 0 6px 13.6px;
+  width: 337.6px
+}
+
+#slide-production {
+  position: absolute;
+  left: 0;
+  bottom: 0
+}
+
+#slide[ppt_theme_type=Full_Map_1] #slide-production {
+  height: 18px;
+  width: 100%;                       /* fallback for older browsers */
+  width: -webkit-fill-available;     /* Chrome/Safari */
+  width: -moz-available;             /* Firefox */
+  width: fill-available;             /* 新版標準提案 */
+  padding: 0 42.5px;
+  text-align: right
+}
+
+#slide[ppt_theme_type=Right_Map_1] #slide-production {
+  width: 50%;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  background-color: rgb(255 251 218)
+}
+
+#slide-production>* {
+  font-size: 12px;
+  transform: scale(.66667);
+  transform-origin: 0 0;
+  white-space: nowrap;
+  width: 150%
+}
+
+#slide[ppt_theme_type=Full_Map_1] #slide-production>* {
+  font-size: 12px
+}
+
+#slide[ppt_theme_type=Right_Map_1] #slide-production>* {
+  font-size: 10.5px
+}
+
+#slide[ppt_theme_type=Full_Map_1] #keypoint {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 70px;
+  border: 1px solid #c00000
+}
+
+#slide[ppt_theme_type=Right_Map_1] #keypoint {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  left: 10px !important;
+  top: 280px !important;
+  height: 100px;
+  width: 340px;
+  border-radius: 10px;
+  background-color: #f2f2f2
+}
+
+#slide[ppt_theme_type=Full_Map_1] #keypoint-currBlock {
+  display: none
+}
+
+#slide[ppt_theme_type=Right_Map_1] #keypoint-currBlock {
+  position: absolute;
+  top: 0;
+  z-index: 0;
+  height: 100%;
+  background-color: #fff0f0;
+  border-radius: 0 10px 10px 0;
+  border-left: #fff solid
+}
+
+#slide[ppt_theme_type=Full_Map_1] #keypoint-label {
+  height: 20px;
+  width: 100%;
+  font-size: 14px;
+  text-align: center;
+  color: #fff;
+  background-color: #ff2f2f
+}
+
+#slide[ppt_theme_type=Right_Map_1] #keypoint-label {
+  width: 100%;
+  font-size: 14px;
+  padding: 8px 10px;
+  line-height: 14px;
+  text-align: left;
+  z-index: 1
+}
+
+#slide[ppt_theme_type=Full_Map_1] #keypoint-content {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+  font-size: 12px;
+  text-align: left;
+  line-height: 14px;
+  background-color: #fff
+}
+
+#slide[ppt_theme_type=Full_Map_1] .warning-text {
+  padding: 0 16px;
+}
+
+#slide[ppt_theme_type=Right_Map_1] #keypoint-content {
+  font-size: 7px;
+  position: relative
+}
+
+#slide[ppt_theme_type=Right_Map_1] .warning-text {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  width: 50px;
+  text-align: center
+}
+
+#slide[ppt_theme_type=Right_Map_1] .warning-text-upper {
+  flex-direction: column-reverse !important
+}
+
+#slide[ppt_theme_type=Right_Map_1] .warning-text-lower {
+  top: 20px
+}
+
+#keypoint-mark {
+  position: relative
+}
+
+#keypoint-mark>div {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  height: 28px;
+  width: 74px
+}
+
+#keypoint-mark .mark-past {
+  color: #000;
+  background-color: #fffce7;
+  border: #808080 solid 1px
+}
+
+#keypoint-mark .mark-fcst {
+  color: #fff;
+  background-color: #ff2f2f;
+  border: #c00000 solid 1px
+}
+
+.timeline-History {
+  position: absolute;
+  border: 1px solid #9e9e9e
+}
+
+.timeline-Estimate {
+  position: absolute;
+  border: 1px solid red
+}
+
+.warning-text-History {
+  color: #000
+}
+
+#slide[ppt_theme_type=Full_Map_1] .timeline-Estimate {
+  display: none
+}
+
+.warning-text-Estimate {
+  color: red
+}
+
+#slide[ppt_theme_type=Right_Map_1] .warning-text span.dashedline {
+  display: none
+}
+
+#slide[ppt_theme_type=Right_Map_1] .warning-text span {
+  line-height: 10px
+}
+
+#slide[ppt_theme_type=Right_Map_1] .warning-text span.dot {
+  height: 6px;
+  width: 6px;
+  border-radius: 50%;
+  margin: 10px 22px
+}
+
+#slide[ppt_theme_type=Right_Map_1] .warning-text-History span.dot {
+  background-color: #9e9e9e
+}
+
+#slide[ppt_theme_type=Right_Map_1] .warning-text-Estimate span.dot {
+  background-color: red
+}
