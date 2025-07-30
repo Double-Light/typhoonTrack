@@ -365,32 +365,32 @@ setTriggerConditions = function() {
             // console.log(baseCanvas.width,animCanvas.width);
             
             // step 1. 取得 g#warning_range 相對於 #animDiv 的位置與大小
-            const targetEl = $("#animDiv #warning_range")[0];
-            const container = $("#animDiv")[0];
+            // const targetEl = $("#animDiv #warning_range")[0];
+            // const container = $("#animDiv")[0];
 
-            const targetRect = targetEl.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
+            // const targetRect = targetEl.getBoundingClientRect();
+            // const containerRect = container.getBoundingClientRect();
 
-            const relX = targetRect.left - containerRect.left;
-            const relY = targetRect.top - containerRect.top;
-            const relWidth = targetRect.width;
-            const relHeight = targetRect.height;
+            // const relX = targetRect.left - containerRect.left;
+            // const relY = targetRect.top - containerRect.top;
+            // const relWidth = targetRect.width;
+            // const relHeight = targetRect.height;
 
             // step 2. 建立新的 canvas，尺寸只跟 warning_range 一樣大
-            const croppedCanvas = document.createElement("canvas");
-            croppedCanvas.width = relWidth * scaleFactor;
-            croppedCanvas.height = relHeight * scaleFactor;
+            // const croppedCanvas = document.createElement("canvas");
+            // croppedCanvas.width = relWidth * scaleFactor;
+            // croppedCanvas.height = relHeight * scaleFactor;
 
-            const croppedCtx = croppedCanvas.getContext("2d");
+            // const croppedCtx = croppedCanvas.getContext("2d");
 
             // step 3. 從 animCanvas 擷取區塊到 croppedCanvas
-            croppedCtx.drawImage(
-              animCanvas,
-              relX * scaleFactor, relY * scaleFactor,         // 擷取位置（來源）
-              relWidth * scaleFactor, relHeight * scaleFactor, // 擷取大小
-              0, 0,                                           // 目標位置
-              relWidth * scaleFactor, relHeight * scaleFactor  // 目標大小
-            );
+            // croppedCtx.drawImage(
+              // animCanvas,
+              // relX * scaleFactor, relY * scaleFactor,         // 擷取位置（來源）
+              // relWidth * scaleFactor, relHeight * scaleFactor, // 擷取大小
+              // 0, 0,                                           // 目標位置
+              // relWidth * scaleFactor, relHeight * scaleFactor  // 目標大小
+            // );
             
             // 🔧 合併三層到一個 canvas
             const mergedCanvas = document.createElement("canvas");
@@ -400,8 +400,8 @@ setTriggerConditions = function() {
 
             // 將各圖層放大後合成
             ctx.drawImage(baseCanvas, 0, 0);
-            // ctx.drawImage(animCanvas, 0, 0);
-            ctx.drawImage(croppedCanvas, relX * scaleFactor, relY * scaleFactor); // 貼到原來位置
+            ctx.drawImage(animCanvas, 0, 0);
+            // ctx.drawImage(croppedCanvas, relX * scaleFactor, relY * scaleFactor); // 貼到原來位置
             ctx.drawImage(topCanvas, 0, 0);
 
             gif.addFrame(mergedCanvas, { delay: 1000 / fps });
@@ -443,7 +443,10 @@ setTriggerConditions = function() {
       alert("截圖發生錯誤！");
     } finally {
       // ✅ 還原原始 foreignObject 結構
-      if (typeof $originalSlide == 'object') {$foreignObj.append($originalSlide)};
+      // if (typeof $originalSlide == 'object') {$foreignObj.append($originalSlide)};
+      if ($("svg#basemap foreignObject").find("#slide").length === 0) {
+        $("svg#basemap foreignObject").append($("#slide"))
+      }
       $("#editor-panel").show();
     }
   }
