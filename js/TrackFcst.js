@@ -491,24 +491,73 @@ setSlideDiv = function() {
 // 調整SVG ViewBox (警報時間標記建立/變更、投影片類型變更時啟動)
 change_SVG_Size = function() {
   let ppt_theme_type = $("select#ppt_theme_type option:selected").val() // 投影片樣式
-  const mbox = $("g#warning_marks")[0].getBBox(); // marks範圍 {x, y, width, height}
-  const taiwanBBoxes = [360, 340, 56, 65]; // 臺灣範圍  [x, y, width, height]
-
+  const tBounds = [360, 340, 416, 405]; // 臺灣範圍  [left, top, right, bottom]
+  
   let contentSpace // 內容區域
-  let whiteSpace // 留白區域 
+  let whiteSpace   // 留白區域 
   let newScale
 
-  // 內容區域 = marks + 臺灣範圍
-  if ($("g#warning_marks g").length > 0) {
-    xs = Math.min(mbox.x, taiwanBBoxes[0])
-    ys = Math.min(mbox.y, taiwanBBoxes[1])
-    xe = Math.max(mbox.x + mbox.width, taiwanBBoxes[0] + taiwanBBoxes[2])
-    ye = Math.max(mbox.y + mbox.height, taiwanBBoxes[1] + taiwanBBoxes[3])
-    contentSpace = [xs, ys, xe - xs, ye - ys]
-    // contentSpace = [Math.min(mbox.x,taiwanBBoxes[0]),Math.min(mbox.y,taiwanBBoxes[1]),Math.max(mbox.width,taiwanBBoxes[2]),Math.max(mbox.height,taiwanBBoxes[3])]
-  } else {
-    contentSpace = [405, 288, 216, 144] // [x, y, width, height] E115-E130, N20-N30
+  if ($("g#warning_marks g").length > 0) {  // 有重要時間點 => 內容區域 = marks + 暴風半徑 + 臺灣範圍
+    // marks範圍 [left, top, right, bottom]
+    const mBounds = (() => { const b = $("g#warning_marks")[0].getBBox(); return [b.x, b.y, b.x + b.width, b.y + b.height]; })();
+    console.log("mBounds =", mBounds);
+    
+    // 現在時間、重要時間暴風半徑範圍 (g#warning_circle + g#tc_circle)
+    const cBounds = [xPData[0], ...warning_data]
+      .filter(item =>
+        typeof item.ax === "number" &&
+        typeof item.ay === "number" &&
+        typeof item.R15_x === "number" &&
+        typeof item.R15_y === "number"
+      )
+      .map(item => [
+        item.ax - item.R15_x,
+        item.ay - item.R15_y,
+        item.ax + item.R15_x,
+        item.ay + item.R15_y
+      ])
+      .reduce((acc, [xs, ys, xe, ye]) => [
+        Math.min(acc[0], xs), // min_dx
+        Math.min(acc[1], ys), // min_dy
+        Math.max(acc[2], xe), // max_dx
+        Math.max(acc[3], ye)  // max_dy
+      ], [Infinity, Infinity, -Infinity, -Infinity]);
+    console.log("cBounds =", cBounds);
+    
+    xs = Math.min(mBounds[0], cBounds[0], tBounds[0])
+    ys = Math.min(mBounds[1], cBounds[1], tBounds[1])
+    xe = Math.max(mBounds[2], cBounds[2], tBounds[2])
+    ye = Math.max(mBounds[3], cBounds[3], tBounds[3])
+    contentSpace = [xs, ys, xe - xs, ye - ys] // [x, y, width, height]
+    
+  } else {                                  // 無重要時間點 => 預報守視階段暴風半徑 + 臺灣範圍
+    // 預報守視階段暴風半徑範圍 
+    const cBounds = xPData
+      .filter(item => item.coordinate[0] >= 115 && item.coordinate[0] <= 128 && item.coordinate[1] >= 17 && item.coordinate[1] <= 29)  // 守視範圍
+      .map(item => [
+        item.ax - item.R15_x,
+        item.ay - item.R15_y,
+        item.ax + item.R15_x,
+        item.ay + item.R15_y
+      ])
+      .reduce((acc, [xs, ys, xe, ye]) => [
+        Math.min(acc[0], xs), // min_dx
+        Math.min(acc[1], ys), // min_dy
+        Math.max(acc[2], xe), // max_dx
+        Math.max(acc[3], ye)  // max_dy
+      ], [Infinity, Infinity, -Infinity, -Infinity]);
+    console.log("cBounds =", cBounds);
+    
+    xs = Math.min(cBounds[0], tBounds[0])
+    ys = Math.min(cBounds[1], tBounds[1])
+    xe = Math.max(cBounds[2], tBounds[2])
+    ye = Math.max(cBounds[3], tBounds[3])
+    
+    contentSpace = [xs, ys, xe - xs, ye - ys] // [x, y, width, height]
+    // contentSpace = [405, 288, 216, 144] // [x, y, width, height] E115-E130, N20-N30
   }
+  console.log("contentSpace =", contentSpace);
+  
 
   if (ppt_theme_type === "Full_Map_1") {
     whiteSpace = [220, 60, 480, 260] // [x, y, width, height]

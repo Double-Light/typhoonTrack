@@ -1288,7 +1288,7 @@ gen_warning = function() {
 
   // console.log(Warning_Data);
 
-  if (Warning_Data.length === 0) {
+  if (Warning_Data.filter(data => data.time != "").length === 0) {
     $("#warning_estimate_list").html('<div><span style="color:#f44336;">未接觸臺灣近海</span></div>');
     $("#keypoint").hide();
     change_SVG_Size()
