@@ -237,32 +237,30 @@ setTriggerConditions = function() {
             removeContainer: true,         // 清除臨時容器節省記憶體
             logging: false,                // 關閉 log
           });
-        }
+          
+          if (mode === "clipboard") {
+            canvas.toBlob(async (blob) => {
+              try {
+                await navigator.clipboard.write([
+                  new ClipboardItem({ "image/png": blob })
+                ]);
+                alert("已複製畫面到剪貼簿！");
+              } catch (err) {
+                console.error("複製失敗：", err);
+                alert("複製失敗，請確認瀏覽器支援剪貼簿API。");
+              }
+            }, "image/png");
+          }
 
-        if (mode === "clipboard") {
-          canvas.toBlob(async (blob) => {
-            try {
-              await navigator.clipboard.write([
-                new ClipboardItem({ "image/png": blob })
-              ]);
-              alert("已複製畫面到剪貼簿！");
-            } catch (err) {
-              console.error("複製失敗：", err);
-              alert("複製失敗，請確認瀏覽器支援剪貼簿API。");
-            }
-          }, "image/png");
-        }
-
-        if (mode === "png") {
-          canvas.toBlob((blob) => {
-            const link = document.createElement("a");
-            link.download = "screenshot.png";
-            link.href = URL.createObjectURL(blob);
-            link.click();
-          }, "image/png");
-        }
-
-        if (mode === "gif") {
+          if (mode === "png") {
+            canvas.toBlob((blob) => {
+              const link = document.createElement("a");
+              link.download = "screenshot.png";
+              link.href = URL.createObjectURL(blob);
+              link.click();
+            }, "image/png");
+          }
+        } else if (mode === "gif") {
           let cancelProgress = false;
           $("#progressOverlay").show();
           $("#progressText").text("正在處理...");
