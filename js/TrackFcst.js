@@ -492,7 +492,7 @@ setSlideDiv = function() {
 change_SVG_Size = function() {
   let ppt_theme_type = $("select#ppt_theme_type option:selected").val() // 投影片樣式
   const mbox = $("g#warning_marks")[0].getBBox(); // marks範圍 {x, y, width, height}
-  const taiwanBBoxes = [405, 340, 56, 65]; // 臺灣範圍  [x, y, width, height]
+  const taiwanBBoxes = [360, 340, 56, 65]; // 臺灣範圍  [x, y, width, height]
 
   let contentSpace // 內容區域
   let whiteSpace // 留白區域 
@@ -507,7 +507,7 @@ change_SVG_Size = function() {
     contentSpace = [xs, ys, xe - xs, ye - ys]
     // contentSpace = [Math.min(mbox.x,taiwanBBoxes[0]),Math.min(mbox.y,taiwanBBoxes[1]),Math.max(mbox.width,taiwanBBoxes[2]),Math.max(mbox.height,taiwanBBoxes[3])]
   } else {
-    contentSpace = taiwanBBoxes // [x, y, width, height]
+    contentSpace = [405, 288, 216, 144] // [x, y, width, height] E115-E130, N20-N30
   }
 
   if (ppt_theme_type === "Full_Map_1") {

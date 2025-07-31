@@ -907,7 +907,7 @@ function setTcAnimate (aniType="all") {
     
     // let t=0
     
-    aniDatas = [...xPData, ...warning_data]
+    aniDatas = [...PData, ...warning_data]
       .filter(item => item.tau >= aniStartTau && item.tau <= aniEndTau)
       .sort((a, b) => a.tau - b.tau)
       .map(item => ({
@@ -1291,6 +1291,7 @@ gen_warning = function() {
   if (Warning_Data.length === 0) {
     $("#warning_estimate_list").html('<div><span style="color:#f44336;">未接觸臺灣近海</span></div>');
     $("#keypoint").hide();
+    change_SVG_Size()
   } else {
     // 設定警報時間預估(LST)選單
     $.each(WarningText, function(key, value) {
@@ -1315,12 +1316,6 @@ gen_warning = function() {
     // 繪製 警報半徑 warning_circle
     setWarningCircle()
     setWarningMarks()
-    
-    // 暴風半徑動畫
-    setTcAnimate()
-    
-    // 重設編輯模式
-    setEditModel()
 
     // 設定 keypoint 拖動
     // const enable = $("#slide").hasClass("editable")
@@ -1329,5 +1324,11 @@ gen_warning = function() {
 
     $("#keypoint").show();
   }
+  
+  // 暴風半徑動畫
+  setTcAnimate()
+  
+  // 重設編輯模式
+  setEditModel()
 };
 
