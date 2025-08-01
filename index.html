@@ -101,7 +101,7 @@
       let trackFcst_dict   // 該年度颱風路徑預報時間(守視範圍內)
       
       let perHr = 8        // 路徑動畫每秒幾小時
-      let aniDatas          // 路徑動畫資訊
+      let aniDatas         // 路徑動畫資訊
       let aniParas
 
       let myData           // Output Data
@@ -109,8 +109,8 @@
 
       /* 建立選單：年分 */
       let Select_List = "年份：<select id='year'>"
-      /* for(var i= moment().year();i>2020;i--) {*/
-      for (var i = 2025; i > 2020; i--) {
+      // for (var i = 2025; i > 2020; i--) {
+      for(var i= moment().year();i>2020;i--) {
         Select_List += "<option value='" + i + "'>" + i + "</option>"
       };
       Select_List += "</select>&emsp;"
@@ -131,7 +131,7 @@
       if (Flag_Initial) {
         // console.log("頁面初始化");
         // 讀取該年度路徑預報資料
-        get_Track_data()
+        // get_Track_data()
 
         // 建立 TDTY 選單
         gen_TDTY_List()
@@ -151,7 +151,7 @@
       // 年份變更
       $('select#year').on('change', function() {
         // 讀取該年度路徑預報資料
-        get_Track_data()
+        // get_Track_data()
 
         // TD/TY清單
         gen_TDTY_List()
