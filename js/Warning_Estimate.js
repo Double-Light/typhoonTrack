@@ -350,7 +350,7 @@ setWarningCircle = function() {
   // ---------- 清空既有圖層 ----------
   $("g#warning_circle").empty();
 
-  const iconSize = 16; // 暴風中心ICON大小
+  // const iconSize = 16; // 暴風中心ICON大小
 
   let xRadius = "";
   let xMarks = "";
@@ -411,7 +411,7 @@ setWarningCircle = function() {
       xRadius += `
       <g class="${warning.time < xPData[0].time ? "mark-past" : "mark-fcst"}" name="${warning.type}">
         <ellipse cx="${ax}" cy="${ay}" rx="${R15_x}" ry="${R15_y}" ${warning.time < xPData[0].time ? 'style="stroke: #CACACA;"' : 'style="stroke: #FFCACA;"'}/>
-        <use x="${ax}" y="${ay}" width="${iconSize}" height="${iconSize}" href="${warning.time < xPData[0].time ? '#tyIcon_past_light' : '#tyIcon_fcst_light'}"></use>
+        <use x="${ax}" y="${ay}" href="${warning.time < xPData[0].time ? '#tyIcon_past_light' : '#tyIcon_fcst_light'}"></use>
       </g>`;
 
       // 對 Warning_Data 寫回計算結果
