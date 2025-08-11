@@ -69,7 +69,7 @@ gen_TDTY_List = function() {
   // Inputs = get_Inputs()
 };
 
-/* 讀取該年度颱風路徑預報時間(僅列出守視範圍內) */
+/* 讀取該年度颱風路徑預報時間(僅列出守視範圍內或有警報估計資料) */
 get_TrackFcst_dict = function() {
   trackFcst_dict = {}
   FData.forEach(typhoon => {
@@ -77,9 +77,10 @@ get_TrackFcst_dict = function() {
     const typhoonName = typhoon.typhoon_name;
     const cwbTyphoonName = typhoon.cwb_typhoon_name;
 
-    // 篩選 tau = 0 時，颱風中心位置在守視範圍內的 init_time
+    // 篩選 tau = 0 且 (颱風中心位置在守視範圍內 或 該時間點有警報估計資料) 的 init_time
     let initTimes = typhoon.data
-    .filter(data => data.tau === 0 && data.coordinate[0] >= 115 && data.coordinate[0] <= 128 && data.coordinate[1] >= 17 && data.coordinate[1] <= 29)
+    .filter(data => data.tau === 0 && ((data.coordinate[0] >= 115 && data.coordinate[0] <= 128 && data.coordinate[1] >= 17 && data.coordinate[1] <= 29)||
+        (Warning_Estimate[typhoonName] != undefined && Warning_Estimate[typhoonName]?.files?.includes(moment(data.init_time).utc().format("yyyyMMDDHHmm")))))
     .map(data => data.init_time);
 
     // 剔除只出現一次的時間點 (tau 無>0)
@@ -105,6 +106,7 @@ get_TrackFcst_dict = function() {
     };
   });
 };
+
 
 /* 建立/更新選單：颱風路徑預報時間清單 */
 gen_TrackFcst_list = function() {

@@ -396,8 +396,10 @@ setWarningCircle = function() {
       const tauTime = Pre.tau + (This.tau - Pre.tau) * delta;
 
       // 內插 R15 / R25
-      const R15 = (ThisR15 !== PreR15) ? (ThisR15 <= 0 ? PreR15 : PreR15 + (ThisR15 - PreR15) * delta) : PreR15;
-      const R25 = (ThisR25 !== PreR25) ? (PreR25 + (ThisR25 - PreR25) * delta) : PreR25;
+
+      const R15 = (ThisR15 !== PreR15) ? (ThisR15 <= 0 && delta < 1 ? PreR15 : PreR15 + (ThisR15 - PreR15) * delta) : PreR15;
+      const R25 = (ThisR25 !== PreR25) ? (ThisR25 <= 0 && delta < 1 ? PreR25 : PreR25 + (ThisR25 - PreR25) * delta) : PreR25
+
 
       // 麥卡托投影
       const ax = roundTo((Lon - Map_Range[0]) * per_Lon, 2);
@@ -881,8 +883,11 @@ setWarningMarksSize = function(fontSize = 9) {
 // 建立暴風半徑動畫
 function setTcAnimate (aniType="all") {
   $("g#tc_circle").contents().remove();
+  $("#warning_marks >g animate").remove();  //移除所有標記顯示/隱藏動畫
+  $("#warning_marks .mark-fcst").removeAttr("opacity");  // 預報時段標記全顯示
+
   let xRadius = ""
-  
+
   if ($("#btn_animsEnable").prop("checked")) { // 動畫模式
     // console.log("動畫模式")
     let aniStartTau = 0
@@ -891,19 +896,21 @@ function setTcAnimate (aniType="all") {
     // console.log(aniType)
     
     if (aniType == "all") {  // 全預報時段動畫
-      $("#warning_marks .mark-fcst").show() // 預報時段標記全顯示
+      // $("#warning_marks .mark-fcst").show() // 預報時段標記全顯示
       $("#keypoint .warning-text").removeClass("active")
     } else {                 // 區段動畫
-      // aniStartTau = Math.max(warning_data.find(item => item.type === aniType).tau,0)
-      aniStartTau = warning_data.find(item => item.type === aniType).tau 
+      aniStartTau = Math.max(warning_data.find(item => item.type === aniType).tau,0)
+      // aniStartTau = warning_data.find(item => item.type === aniType).tau 
+      // aniStartTau = Math.max(warning_data.find(item => item.type === aniType).tau - 12 ,0)
       // 只顯示該時間點預報標記
-      $("#warning_marks .mark-fcst").hide()
-      $(`#warning_marks .mark-fcst[name='${aniType}']`).show()
+      // $("#warning_marks .mark-fcst").hide()
+      // $(`#warning_marks .mark-fcst[name='${aniType}']`).show()
+      $("#warning_marks .mark-fcst").css("opacity", "0");  // 預報時段標記全隱藏
       $("#keypoint .warning-text").removeClass("active")
       $(`#keypoint .warning-text[name='${aniType}']`).addClass("active")
     }
     
-    // console.log(aniType,aniStartTau);
+    console.log(aniType,aniStartTau,aniEndTau);
     
     // let t=0
     
@@ -989,6 +996,34 @@ function setTcAnimate (aniType="all") {
           ${aniStartTau < 0 ? `<animate attributeName="href" dur="${dur}" ${aniAttr} values="#tyIcon_past;#tyIcon_past;#tyIcon_fcst;##tyIcon_fcst" keyTimes="${keyTimes_color}" />` : ''}
         </use>
       </g>`
+    
+    if (aniType != "all") { 
+      Warning_Data.forEach(item => {
+        if (item.tau > aniStartTau && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
+          const $target = $(`#warning_marks .mark-fcst[name='${item.type}']`);
+
+          // 建立 SVG animate 元素
+          const SVG_NS = "http://www.w3.org/2000/svg";
+          const animate = document.createElementNS(SVG_NS, "animate");
+
+          animate.setAttribute("attributeName", "opacity");
+          animate.setAttribute("dur", dur);
+          animate.setAttribute("repeatCount", "indefinite");
+          animate.setAttribute("values", "0;0;1;1;0");
+
+          const t = roundTo((item.tau - aniStartTau) / dur / perHr, 3);
+          animate.setAttribute("keyTimes", `0;${t};${t};${roundTo((dur-0.5)/dur, 3)};1`);
+
+          animate.setAttribute("fill", "freeze");
+
+          // 插入 animate 元素
+          $target[0].appendChild(animate);
+        }
+      });
+    }
+
+      
+    
   } else {  // 靜態模式
     // console.log("靜態模式")
     let tauTime = parseFloat($("g#tc_circle").attr("tau") || 0);
