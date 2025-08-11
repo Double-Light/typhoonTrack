@@ -341,8 +341,9 @@ setTriggerConditions = function() {
           
           for (let frame = 0; frame <= totalFrames; frame++) {
             if (cancelProgress) break;
-            const tau = parseInt((frame * perHr / fps)); //  tauTime 精確控制小數點一位
-            // console.log(tau)
+            // const tau = parseInt((frame * perHr / fps));
+            const tau = parseInt((frame * perHr / fps) + aniParas.tau[0])  //  tauTime 精確控制小數點一位
+            console.log(tau)
             
             // 呼叫控制暴風圈的函式
             await setTcCircle(tau,$("#animDiv>svg"));

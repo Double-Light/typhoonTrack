@@ -884,7 +884,7 @@ setWarningMarksSize = function(fontSize = 9) {
 function setTcAnimate (aniType="all") {
   $("g#tc_circle").contents().remove();
   $("#warning_marks >g animate").remove();  //移除所有標記顯示/隱藏動畫
-  $("#warning_marks .mark-fcst").removeAttr("opacity");  // 預報時段標記全顯示
+  $("#warning_marks .mark-fcst").css("opacity", "");  // 預報時段標記全顯示
 
   let xRadius = ""
 
@@ -1068,7 +1068,8 @@ function setTcAnimate (aniType="all") {
       // console.log("全預報時段動畫");
       tauTime = xPData[0].tau;
       ({ time, ax, ay, R15_x, R15_y, R25_x, R25_y } = xPData[0]);
-      $("#warning_marks .mark-fcst").show() // 預報時段標記全顯示
+      // $("#warning_marks .mark-fcst").show() // 預報時段標記全顯示
+      $("#warning_marks .mark-fcst").css("opacity", "");  // 預報時段標記全顯示
       $("#keypoint .warning-text").removeClass("active")
     } else if (aniType === "go-back-point" || aniType === "go-next-point") {
       tauRange = aniType === "go-back-point"
@@ -1103,11 +1104,13 @@ function setTcAnimate (aniType="all") {
         break; // ✅ 找到後就跳出
       }
       
-      $("#warning_marks .mark-fcst").hide()
+      // $("#warning_marks .mark-fcst").hide()
+      $("#warning_marks .mark-fcst").css("opacity", "0")
       $("#keypoint .warning-text").removeClass("active")
       Warning_Data.forEach(item => {
         if (item.tau == tauTime && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
-          $(`#warning_marks .mark-fcst[name='${item.type}']`).show()
+          // $(`#warning_marks .mark-fcst[name='${item.type}']`).show()
+          $(`#warning_marks .mark-fcst[name='${item.type}']`).css("opacity", "")
           $(`#keypoint .warning-text[name='${item.type}']`).addClass("active")
         }
       });
@@ -1119,8 +1122,10 @@ function setTcAnimate (aniType="all") {
       }
       
       // 只顯示該時間點預報標記
-      $("#warning_marks .mark-fcst").hide()
-      $(`#warning_marks .mark-fcst[name='${aniType}']`).show()
+      // $("#warning_marks .mark-fcst").hide()
+      // $(`#warning_marks .mark-fcst[name='${aniType}']`).show()
+      $("#warning_marks .mark-fcst").css("opacity", "0");  // 預報時段標記全隱藏
+      $(`#warning_marks .mark-fcst[name='${aniType}']`).css("opacity", "")
       $("#keypoint .warning-text").removeClass("active")
       $(`#keypoint .warning-text[name='${aniType}']`).addClass("active")
     }
