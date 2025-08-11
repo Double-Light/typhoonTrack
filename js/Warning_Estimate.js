@@ -899,9 +899,9 @@ function setTcAnimate (aniType="all") {
       // $("#warning_marks .mark-fcst").show() // 預報時段標記全顯示
       $("#keypoint .warning-text").removeClass("active")
     } else {                 // 區段動畫
-      aniStartTau = Math.max(warning_data.find(item => item.type === aniType).tau,0)
+      // aniStartTau = Math.max(warning_data.find(item => item.type === aniType).tau,0)
       // aniStartTau = warning_data.find(item => item.type === aniType).tau 
-      // aniStartTau = Math.max(warning_data.find(item => item.type === aniType).tau - 12 ,0)
+      aniStartTau = Math.max(warning_data.find(item => item.type === aniType).tau - 12 ,0)
       // 只顯示該時間點預報標記
       // $("#warning_marks .mark-fcst").hide()
       // $(`#warning_marks .mark-fcst[name='${aniType}']`).show()
@@ -912,26 +912,60 @@ function setTcAnimate (aniType="all") {
     
     console.log(aniType,aniStartTau,aniEndTau);
     
-    // let t=0
+    aniDatas = [];  // 先清空陣列
     
-    aniDatas = [...PData, ...warning_data]
+    // 起始 dt=0
+    for (let i = 1; i < PData.length; i++) {
+      const Pre = PData[i - 1];
+      const This = PData[i];
+
+      // 僅在 aniStartTau 位於 Pre.tau 與 This.tau 之間時才處理
+      if (!(aniStartTau < This.tau && aniStartTau > Pre.tau)) continue;
+
+      const delta = (aniStartTau - Pre.tau) / (This.tau - Pre.tau);
+
+      const PreTime = moment(Pre.time);
+      const ThisTime = moment(This.time);
+      const interpolatedTime = PreTime.clone().add(delta * (ThisTime.diff(PreTime)), 'milliseconds');
+
+      aniDatas.push({
+        type: "start",
+        time: interpolatedTime.format('DD日HH時mm分').replace("00分", ""),
+        tau: aniStartTau,
+        ax: roundTo(Pre.ax + (This.ax - Pre.ax) * delta, 2),
+        ay: roundTo(Pre.ay + (This.ay - Pre.ay) * delta, 2),
+        R15_x: roundTo(Pre.R15_x + (This.R15_x - Pre.R15_x) * delta, 3),
+        R15_y: roundTo(Pre.R15_y + (This.R15_y - Pre.R15_y) * delta, 3),
+        R25_x: roundTo(Pre.R25_x + (This.R25_x - Pre.R25_x) * delta, 3),
+        R25_y: roundTo(Pre.R25_y + (This.R25_y - Pre.R25_y) * delta, 3)
+      });
+
+      break;
+    }
+
+
+    // 先篩選排序好，再用 forEach push
+    [...PData, ...warning_data]
       .filter(item => item.tau >= aniStartTau && item.tau <= aniEndTau)
       .sort((a, b) => a.tau - b.tau)
-      .map(item => ({
-        type: (item.type === "fcst" || item.type === "curr") ? `${item.type}_${item.tau}` : item.type,
-        time: moment(item.time).format('DD日HH時mm分').replace("00分", ""),
-        tau: item.tau,
-        ax: item.ax,
-        ay: item.ay,
-        R15_x: item.R15_x,
-        R15_y: item.R15_y,
-        R25_x: item.R25_x,
-        R25_y: item.R25_y
-      }));
+      .forEach(item => {
+        aniDatas.push({
+          type: (item.type === "fcst" || item.type === "curr") ? `${item.type}_${item.tau}` : item.type,
+          time: moment(item.time).format('DD日HH時mm分').replace("00分", ""),
+          tau: item.tau,
+          ax: item.ax,
+          ay: item.ay,
+          R15_x: item.R15_x,
+          R15_y: item.R15_y,
+          R25_x: item.R25_x,
+          R25_y: item.R25_y
+        });
+      });
+
       
     // 計算dt
     aniDatas.forEach((item, i) => {
-      item.dt = i > 0 ? (item.tau - aniDatas[i - 1].tau) / perHr : 0;
+      item.dt = i > 0 ? (item.tau - aniDatas[i - 1].tau) / perHr : (item.tau - aniStartTau) / perHr;
     });
 
     // console.log("aniDatas:", aniDatas);
