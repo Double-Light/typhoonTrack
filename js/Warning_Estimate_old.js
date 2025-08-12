@@ -1191,193 +1191,165 @@ function setTcCircle(tauTime=0 ,$svg=$("svg#basemap")) {
 }
 
 
-// 顯示/隱藏重要時間點
-function showHideKeypoint(checkElement) {
-  var isChecked = $(checkElement).prop('checked');
-  var $parentElement = $(checkElement).closest(".warning-group");
+// 修改重要時間點內容 (warning-time 修改時觸發)
+changeWarningTime = function(inputElement) {
+  var parentElement = inputElement.closest(".warning-group");
+  if (parentElement) {
+    var nameAttributeValue = parentElement.getAttribute("name");
+    var warningTimeValue = moment(inputElement.value);
+    // var warningTypeText = $(parentElement).find(".warning-text").text().replace("：", "");
 
-  if ($parentElement.length) {
-    var nameAttributeValue = $parentElement.attr("name");
+    // console.log(!isNaN(warningTimeValue.valueOf()))
 
-    if (isChecked) {
-      $("#keypoint-content div[name='" + nameAttributeValue + "']").show();
-      $("#keypoint").show();
-    } else {
-      $("#keypoint-content div[name='" + nameAttributeValue + "']").hide();
+    if (inputElement.value === '') {
+      console.log(warningTimeValue, '時間清空')
 
-      // 檢查是否所有 warning-check 都未勾選
-      var allUnchecked = $(".warning-check").toArray().every(function(el) {
-        return !el.checked;
-      });
-      if (allUnchecked) {
-        $("#keypoint").hide();
-      } else {
-        $("#keypoint").show();
-      }
-    }
+      // 警報時間預估(LST)設定
+      inputElement.setAttribute('value', '');
+      inputElement.value = '';
 
-    setKeypointContent();
-    setWarningCircle();
-    setWarningMarks();
-    setTcAnimate();
-    setEditModel();
-  }
-}
+      // 取消勾選警報時間預估(LST)核取方塊
+      $(".warning-group[name='" + nameAttributeValue + "'] .warning-check").prop('checked', false)
 
-// 更新警報
-function changeWarning($warnGroup, changeType) {
-  var nameAttributeValue = $warnGroup.attr("name");
-
-  if (changeType === "changeTime") {
-    var $inputElement = $warnGroup.find(".warning-time");
-    var warningTimeValue = moment($inputElement.val());
-
-    if ($inputElement.val() === '') {
-      // 時間清空
-      $inputElement.attr('value', '').val('');
-      $warnGroup.find(".warning-check").prop('checked', false);
-
+      // 更新Warning_Data (找到 Warning_Data 內 type 為 nameAttributeValue 的物件並修改其 time 值)
       Warning_Data.forEach(item => {
         if (item.type === nameAttributeValue) {
           item.time = '';
         }
       });
     } else if (!isNaN(warningTimeValue.valueOf())) {
-      var warningTime = moment(warningTimeValue).format('YYYY-MM-DD HH:mm');
-      var startTime = moment(PData[0].time).format('YYYY-MM-DD HH:mm');
-      var endTime = moment(PData[PData.length - 1].time).format('YYYY-MM-DD HH:mm');
-
+      // console.log('時間格式正常')
+      var warningTime = moment(warningTimeValue).format('yyyy-MM-DD HH:mm')
+      var startTime = moment(PData[0].time).format('yyyy-MM-DD HH:mm')
+      var endTime = moment(PData[PData.length-1].time).format('yyyy-MM-DD HH:mm')
+      
       if (warningTime > endTime) {
-        $inputElement.val(PData[PData.length - 1].time);
-        warningTime = endTime;
+        console.log('時間晚於最後時間點')
+        inputElement.value = PData[PData.length-1].time
+        warningTime = endTime
       } else if (warningTime < startTime) {
-        $inputElement.val(PData[0].time);
-        warningTime = startTime;
+        console.log('時間早於最初時間點')
+        inputElement.value = PData[0].time
+        warningTime = startTime
       }
+      
+      // 警報時間預估(LST)設定
+      inputElement.setAttribute('value', warningTime);
+      inputElement.value = warningTime;
 
-      $inputElement.attr('value', warningTime).val(warningTime);
-      $warnGroup.find(".warning-check").prop('checked', true);
+      // 勾選警報時間預估(LST)核取方塊
+      $(".warning-group[name='" + nameAttributeValue + "'] .warning-check").prop('checked', true)
 
+      // 設定span元素的文字內容並顯示
+      // $("#keypoint-content span[name='" + nameAttributeValue + "']").text(`${moment(warningTimeValue).format('DD日 HH:mm')} --- ${warningTypeText} `);
+
+      // 更新Warning_Data (找到 Warning_Data 內 type 為 nameAttributeValue 的物件並修改其 time 值)
       Warning_Data.forEach(item => {
         if (item.type === nameAttributeValue) {
           item.time = warningTime;
           item.source = "Self_Editing";
-          $warnGroup.attr('source', "Self_Editing");
+          $(".warning-group[name='" + item.type + "']").attr('source', "Self_Editing");
         }
       });
 
+      // 將 Warning_Data 依時間先後順序重新排序(空白排後)	
       Warning_Data.sort((a, b) => {
-        const timeA = a.time ? moment(a.time) : moment('9999-12-31 23:59');
-        const timeB = b.time ? moment(b.time) : moment('9999-12-31 23:59');
+        // Handle empty time strings by converting them to the earliest possible date
+        const timeA = a.time ? moment(a.time) : moment('9999-12-31T23:59:59Z'); // Earliest possible moment
+        const timeB = b.time ? moment(b.time) : moment('9999-12-31T23:59:59Z'); // Earliest possible moment
+
+        // Perform the comparison
         return timeA - timeB;
       });
-    } else {
-      $inputElement.val($inputElement.attr('value'));
-    }
 
-    setKeypointContent();
-    setWarningCircle();
-    setWarningMarks();
-    setTcAnimate();
-    setEditModel();
-  }
+      // 設定重要時間點keypoint-content
+      setKeypointContent()
 
-  if (changeType === "changeText") {
-    // TODO: 依據 warning-text 的內容更新 Warning_Data
-    var newText = $warnGroup.find(".warning-text").text().replace(/：$/, '');
-    console.log("更新文字：", newText);
-
-    Warning_Data.forEach(item => {
-      if (item.type === nameAttributeValue) {
-        item.text = newText; // 假設 Warning_Data 有 text 欄位
-        item.source = "Self_Editing";
-        $warnGroup.attr('source', "Self_Editing");
-      }
-    });
-    
-    $(`#keypoint-content .warning-text[name='${nameAttributeValue}'] span`)[3].innerHTML = newText
-    $(`#warning_marks g[name='${nameAttributeValue}'] text tspan`)[1].innerHTML = newText
-  }
-}
-
-// 增加/減少 1 小時
-function incrementHour(button) { // 參數改成 button
-  var $warnGroup = $(button).closest(".warning-group"); // 轉成 jQuery
-  var $inputElement = $warnGroup.find(".warning-time");
-  var dateStr = $inputElement.val() || onTheHourStr;
-
-  $inputElement.val(moment(dateStr).add(1, 'hours').format('YYYY-MM-DD HH:mm'));
-  changeWarning($warnGroup, 'changeTime');
-}
-
-function decrementHour(button) {
-  var $warnGroup = $(button).closest(".warning-group");
-  var $inputElement = $warnGroup.find(".warning-time");
-  var dateStr = $inputElement.val() || onTheHourStr;
-
-  $inputElement.val(moment(dateStr).add(-1, 'hours').format('YYYY-MM-DD HH:mm'));
-  changeWarning($warnGroup, 'changeTime');
-}
-
-
-// 雙擊 warning-text 進入編輯模式
-$(document).on("dblclick", ".warning-text", function () {
-  var $this = $(this);
-  var originalText = $this.text().replace(/：$/, '');
-  var $input = $("<input type='text' class='warning-text-edit'>").val(originalText);
-
-  $this.empty().append($input);
-  $input.focus();
-
-  $input.on("blur keydown", function (e) {
-    if (e.type === "blur" || e.key === "Enter") {
-      var newText = $input.val();
-      $this.text(newText + "："); // 還原冒號
-      changeWarning($this.closest(".warning-group"), 'changeText');
+      // 繪製 警報半徑 warning_circle
+      setWarningCircle()
+      setWarningMarks()
       
-      // 設定 warning-text 寬度
-      $(".warning-group .warning-text").css("width",(Math.max(...warning_data.map(item => item.text.length))+1)*16)
+      // 暴風半徑動畫
+      setTcAnimate()
+      
+      // 重設編輯模式
+      setEditModel()
+    } else {
+      console.log(warningTimeValue, '時間格式異常')
+      inputElement.value = inputElement.getAttribute('value')
     }
-  });
-  
+  }
+}
 
-});
+// 重要時間點顯示/隱藏
+showHideKeypoint = function(checkElement) {
+  var isChecked = checkElement.checked;
+  var parentElement = checkElement.closest(".warning-group");
+  if (parentElement) {
+    var nameAttributeValue = parentElement.getAttribute("name");
+    if (isChecked == true) {
+      $("#keypoint-content div[name='" + nameAttributeValue + "']").show();
+      $("#keypoint").show();
+    } else {
+      $("#keypoint-content div[name='" + nameAttributeValue + "']").hide();
 
-// 新增警報重要時間點
-$(function () {
-  $("#btn_warningAdd").on("click", function () {
-    let i = 1;
-    while (i <= warning_data.length) {
-      let selfType = `self_editing_${i}`;
-      let obj = Warning_Data.find(function(item) {
-        return item.type === selfType;
-      });
-      console.log(selfType, obj);
-
-      if (obj == undefined) {
-        let item = {
-          'type': selfType,
-          'time': '',
-          'text': `重要時間點 ${i}`,
-          'source': 'Self_Editing'
+      // 檢查 warning-check 是否皆為未勾選
+      var allUnchecked = true; // 預設皆為未勾選
+      $(".warning-check").each(function() {
+        if (this.checked) {
+          allUnchecked = false;
+          return false; // 终止 each 循环
         }
-        
-        Warning_Data.push(item);
-        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value=""><div class="warning-text" name="${item["text"]}">${item["text"]}：</div><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'))"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
-        
-        // 設定 warning-text 寬度
-        $(".warning-group .warning-text").css("width",(Math.max(...warning_data.map(item => item.text.replace(" ","").length))+1)*16)
-        
-        break;
+      });
+      if (allUnchecked) { // 所有 warning-check 皆未勾選
+        $("#keypoint").hide();
+      } else {
+        $("#keypoint").show();
       }
-      i++;
     }
-  });
-});
 
+    // 設定重要時間點keypoint-content
+    setKeypointContent()
+
+    // 繪製 警報半徑 warning_circle
+    setWarningCircle()
+    setWarningMarks()
+    
+    // 暴風半徑動畫
+    setTcAnimate()
+    
+    // 重設編輯模式
+    setEditModel()
+  }
+}
+
+// warning-time 增加1小時
+incrementHour = function(buttonElement) {
+  var parentElement = buttonElement.parentElement.parentElement;
+  var inputElement = parentElement.querySelector(".warning-time");
+
+  var dateStr = inputElement.value !== "" ? inputElement.value : onTheHourStr;
+
+  inputElement.value = moment(dateStr).add(1, 'hours').format('yyyy-MM-DD HH:mm');
+
+  // $("#keypoint-content span[name='" + parentElement.getAttribute("name") + "']").text(`${moment(inputElement.value).format('DD日 HH:mm')} --- ${$(parentElement).find(".warning-text").text()}`);
+  changeWarningTime(inputElement)
+}
+
+// warning-time 減少1小時
+decrementHour = function(buttonElement) {
+  var parentElement = buttonElement.parentElement.parentElement;
+  var inputElement = parentElement.querySelector(".warning-time");
+
+  var dateStr = inputElement.value !== "" ? inputElement.value : onTheHourStr;
+
+  inputElement.value = moment(dateStr).add(-1, 'hours').format('yyyy-MM-DD HH:mm');
+  // $("#keypoint-content span[name='" + parentElement.getAttribute("name") + "']").text(`${moment(inputElement.value).format('DD日 HH:mm')} --- ${$(parentElement).find(".warning-text").text()}`);
+  changeWarningTime(inputElement)
+}
 
 // 建立警報相關設定 (Warning_Data)
-gen_warning = function() {
+gen_warning = function(isreload = true) {
   $("#warning_estimate_list").contents().remove();
   $("#keypoint-content").contents().remove();
   $("#keypoint").removeAttr("style");
@@ -1385,7 +1357,16 @@ gen_warning = function() {
   
   let FcstTime = moment($("select#trackFcstList option:selected").val()) // 預報時間
 
-  Warning_Data = get_warning_data();
+  if (isreload ) {Warning_Data = get_warning_data();}
+  
+  Warning_Data.push({
+    'type': 'self_editing',
+    'time': '',
+    'text': '中心登陸臺東成功',
+    'source': 'Self_Editing'
+  })
+
+  console.log(Warning_Data);
 
   if (Warning_Data.filter(data => data.time != "").length === 0) {
     $("#warning_estimate_list").html('<div><span style="color:#f44336;">未接觸臺灣近海</span></div>');
@@ -1395,16 +1376,16 @@ gen_warning = function() {
     // 設定警報時間預估(LST)選單
     Warning_Data.forEach(item => {
       if (item['source'] === 'TAFIS_Warning_History' || (moment(item['time']) < FcstTime && item['source'] != 'Self_Editing')) { // 已發布 --> 鎖定編輯
-        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><div class="warning-text" name="${item["text"]}" >${item["text"]}：</div><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'))" disabled><div class="warning-adjust-btn"><button onclick="incrementHour(this)" disabled>▲</button><button onclick="decrementHour(this)" disabled>▼</button></div></div>`);
+        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><div class="warning-text" name="${item["text"]}" >${item["text"]}：</div><input class="warning-time" value="${item["time"]}" onchange="changeWarningTime(this)" disabled><div class="warning-adjust-btn"><button onclick="incrementHour(this)" disabled>▲</button><button onclick="decrementHour(this)" disabled>▼</button></div></div>`);
       } else if (item['time'] === '') { // 無時間 --> 取消勾選
-        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value=""><div class="warning-text" name="${item["text"]}">${item["text"]}：</div><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'))"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
+        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value=""><div class="warning-text" name="${item["text"]}">${item["text"]}：</div><input class="warning-time" value="${item["time"]}" onchange="changeWarningTime(this)"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
       } else {
-        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><div class="warning-text" name="${item["text"]}">${item["text"]}：</div><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'))"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
+        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><div class="warning-text" name="${item["text"]}">${item["text"]}：</div><input class="warning-time" value="${item["time"]}" onchange="changeWarningTime(this)"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
       }
     });
     
     // 設定 warning-text 寬度
-    $(".warning-group .warning-text").css("width",(Math.max(...warning_data.map(item => item.text.length))+1)*16)
+    $(".warning-group .warning-text").css("min-width",(Math.max(...warning_data.map(item => item.text.length))+1)*16)
     
     // $.each(WarningText, function(key, value) {
       // console.log(key, value);
@@ -1413,11 +1394,11 @@ gen_warning = function() {
       // });
       // if (obj !== undefined) {
         // if (obj['source'] === 'TAFIS_Warning_History' || moment(obj['time']) < moment($("select#trackFcstList option:selected").val())) { // 已發布 --> 鎖定編輯
-          // $("#warning_estimate_list").append(`<div class="warning-group" name="${obj["type"]}" source="${obj["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><div class="warning-text" name="${obj["text"]}" >${obj["text"]}：</div><input class="warning-time" value="${obj["time"]}" onchange="changeWarning($(this).closest('.warning-group'))" disabled><div class="warning-adjust-btn"><button onclick="incrementHour(this)" disabled>▲</button><button onclick="decrementHour(this)" disabled>▼</button></div></div>`);
+          // $("#warning_estimate_list").append(`<div class="warning-group" name="${obj["type"]}" source="${obj["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><div class="warning-text" name="${obj["text"]}" >${obj["text"]}：</div><input class="warning-time" value="${obj["time"]}" onchange="changeWarningTime(this)" disabled><div class="warning-adjust-btn"><button onclick="incrementHour(this)" disabled>▲</button><button onclick="decrementHour(this)" disabled>▼</button></div></div>`);
         // } else if (obj['time'] === '') { // 無時間 --> 取消勾選
-          // $("#warning_estimate_list").append(`<div class="warning-group" name="${obj["type"]}" source="${obj["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value=""><div class="warning-text" name="${obj["text"]}">${obj["text"]}：</div><input class="warning-time" value="${obj["time"]}" onchange="changeWarning($(this).closest('.warning-group'))"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
+          // $("#warning_estimate_list").append(`<div class="warning-group" name="${obj["type"]}" source="${obj["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value=""><div class="warning-text" name="${obj["text"]}">${obj["text"]}：</div><input class="warning-time" value="${obj["time"]}" onchange="changeWarningTime(this)"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
         // } else {
-          // $("#warning_estimate_list").append(`<div class="warning-group" name="${obj["type"]}" source="${obj["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><div class="warning-text" name="${obj["text"]}">${obj["text"]}：</div><input class="warning-time" value="${obj["time"]}" onchange="changeWarning($(this).closest('.warning-group'))"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
+          // $("#warning_estimate_list").append(`<div class="warning-group" name="${obj["type"]}" source="${obj["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><div class="warning-text" name="${obj["text"]}">${obj["text"]}：</div><input class="warning-time" value="${obj["time"]}" onchange="changeWarningTime(this)"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
         // }
       // }
     // });
