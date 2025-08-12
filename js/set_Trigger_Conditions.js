@@ -219,7 +219,7 @@ setTriggerConditions = function() {
 
       } else {  // html2canvas 截圖
         const $svgObj = $("#svgObj");
-        const scaleFactor = $svgObj.hasClass('fullscreen') ? 1 : 1 ;  // 畫質放大
+        const scaleFactor = $svgObj.hasClass('fullscreen') ? 2 : 1 ;  // 畫質放大
       
         // 暫時移出 foreignObject，否則 html2canvas 會無法正確截圖
         const $foreignObj = $("svg#basemap foreignObject");
