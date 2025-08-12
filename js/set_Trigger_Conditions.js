@@ -324,7 +324,7 @@ setTriggerConditions = function() {
           // 3. 標題層（topLayer），擷取 silde（HTML文字區）
           $svgClone = $("#basemap").clone();
           // $svgClone.find("g#warning_range, foreignObject").remove();  // 移除  warning_range 、foreignObject
-          $svgClone.find(">g, defs").remove();  // 只留下foreignObject
+          $svgClone.find(">g").remove();  // 只留下foreignObject
 
           const $topDiv = $("<div id='topDiv'>").css({
             position: "absolute",
