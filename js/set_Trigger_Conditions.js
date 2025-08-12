@@ -68,6 +68,7 @@ setTriggerConditions = function() {
   const $zoom = $("#track-zoom");
   const $svgObj = $("#svgObj");
   const $control = $("#editor-panel");
+  const $overlay = $("#progressOverlay");
 
   const baseWidth = $svgObj.innerWidth();
   const baseHeight = $svgObj.innerHeight();
@@ -113,6 +114,7 @@ setTriggerConditions = function() {
     const el = $zoom[0];
     // console.log("#btn_fullscreen on click");
     if (!document.fullscreenElement) {
+      $overlay.appendTo($zoom); // 先移進全螢幕容器
       if (el.requestFullscreen) el.requestFullscreen();
       else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
       else if (el.msRequestFullscreen) el.msRequestFullscreen();
@@ -129,6 +131,7 @@ setTriggerConditions = function() {
       if (document.exitFullscreen) document.exitFullscreen();
       else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
       else if (document.msExitFullscreen) document.msExitFullscreen();
+      $overlay.appendTo($body);
     }
     // setDragRange()   // 設定區塊拖曳範圍
   });
@@ -146,6 +149,7 @@ setTriggerConditions = function() {
       }, 3000);
       // resizeSlide();
     } else {
+      $overlay.appendTo($("body"));
       $svgObj.css("transform", "scale(1)");
       $zoom.css("border", "");
     }
@@ -318,7 +322,20 @@ setTriggerConditions = function() {
           $("body").append($animDiv);
           
           // 3. 標題層（topLayer），擷取 silde（HTML文字區）
-          const topCanvas = await html2canvas($("#slide")[0], {
+          $svgClone = $("#basemap").clone();
+          // $svgClone.find("g#warning_range, foreignObject").remove();  // 移除  warning_range 、foreignObject
+          $svgClone.find(">g, defs").remove();  // 只留下foreignObject
+
+          const $topDiv = $("<div id='topDiv'>").css({
+            position: "absolute",
+            top: "-9999px",
+            width: $svgObj.width(),
+            height: $svgObj.height()
+          }).append($svgClone);
+
+          $("body").append($topDiv);
+
+          const topCanvas = await html2canvas(document.querySelector("#topDiv"), {
             backgroundColor: null,
             scale: scaleFactor,
             useCORS: true,
@@ -429,11 +446,13 @@ setTriggerConditions = function() {
             
             $baseDiv.remove();
             $animDiv.remove();
+            $topDiv.remove();
 
             gif.render();
           } else {
             $baseDiv.remove();
             $animDiv.remove();
+            $topDiv.remove();
           }
         }
       }
