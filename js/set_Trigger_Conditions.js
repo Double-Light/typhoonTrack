@@ -215,7 +215,7 @@ setTriggerConditions = function() {
 
       } else {  // html2canvas 截圖
         const $svgObj = $("#svgObj");
-        const scaleFactor = $svgObj.hasClass('fullscreen') ? 1 : 1.5 ;  // 畫質放大
+        const scaleFactor = $svgObj.hasClass('fullscreen') ? 1 : 1 ;  // 畫質放大
       
         // 暫時移出 foreignObject，否則 html2canvas 會無法正確截圖
         const $foreignObj = $("svg#basemap foreignObject");
@@ -333,7 +333,7 @@ setTriggerConditions = function() {
 
           const gif = new GIF({
             workers: 2,
-            quality: 5,
+            quality: 1,    // 數值越小畫質越高
             width: baseCanvas.width,
             height: baseCanvas.height,
             workerScript: "./js/gif.worker.js" // 確保本地可訪問
