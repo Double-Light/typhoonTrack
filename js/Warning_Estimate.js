@@ -910,7 +910,7 @@ function setTcAnimate (aniType="all") {
       $(`#keypoint .warning-text[name='${aniType}']`).addClass("active")
     }
     
-    console.log(aniType,aniStartTau,aniEndTau);
+    // console.log(aniType,aniStartTau,aniEndTau);
     
     aniDatas = [];  // 先清空陣列
     
