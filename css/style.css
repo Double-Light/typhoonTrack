@@ -370,6 +370,11 @@ select {
   padding-left: 0.5rem;
 }
 
+#btn_warningAdd{
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
 .warning-group {
   display: flex;
   align-items: center;
@@ -381,7 +386,7 @@ select {
   width: 108px;
 }
 
-.warning-group[source="No_Source"] .warning-time {
+.warning-group[source="Self_Editing"] .warning-time {
   background-color: #f00;
   color: #FFF;
 }
@@ -407,6 +412,16 @@ select {
 .warning-adjust-btn button:last-child {
   border-top-left-radius: 0px;
   border-top-right-radius: 0px;
+}
+
+.warning-group .warning-text{
+  /* flex: 0 0 150px; /* 固定最小寬度，剩下的元素自動排 */
+  text-align: right;
+}
+
+.warning-group .warning-text .warning-text-edit{
+  display: flex;
+  width: 90%;
 }
 
 .warning-group[name="warning_in_sea"] .warning-text,
