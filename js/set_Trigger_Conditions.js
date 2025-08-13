@@ -532,6 +532,11 @@ function setEditModel() {
     enableTextEdit(true);       // slide div 啟用雙擊編輯
     enableMarkDrag(true);       // g#warning_marks>g 可拖曳
     
+    if ($("#btn_animsEnable").prop("checked")){
+      $("#btn_animsEnable").prop("checked",false) // 關閉動畫
+      setTcAnimate()
+      toggleAnimEnable()
+    }
   } else {       // 拖曳/縮放模式
     /* ===== 離開編輯模式 ===== */
     enableMapDragZoom();        // 恢復地圖拖曳/縮放

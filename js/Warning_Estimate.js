@@ -516,6 +516,37 @@ setWarningMarks = function() {
       ry
     } = warning;
     let bestScore = -999;
+    
+    // ---------- 時間文字 ----------
+    const date = new Date(warning.time);
+    const day = String(date.getDate()).padStart(2, "0");
+    const hour = String(date.getHours()).padStart(2, "0");
+    const minute = String(date.getMinutes()).padStart(2, "0");
+    const timeStr = minute === "00" ? `${day}日${hour}時` : `${day}日${hour}時${minute}分`;
+    
+    // 計算字數(用於決定 label寬度)
+    tspans = [timeStr, warning.text]
+    let textMaxLen = 0;
+
+    tspans.forEach((text) => {
+        let len = 0;
+        for (let ch of text) {
+            // 判斷是否為半形 (ASCII 範圍)
+            if (/[\u0000-\u00ff]/.test(ch)) {
+                len += 0.5;
+            } else {
+                len += 1;
+            }
+        }
+
+        // console.log(text, len);
+
+        if (len > textMaxLen) {
+            textMaxLen = len;
+        }
+    });
+
+    // console.log("最大加權字數：", textMaxLen);
 
     // console.log(warning.type);
     outerLoop:
@@ -535,9 +566,10 @@ setWarningMarks = function() {
         if (Ang < 60 || Ang > 300) ConnectorType = 2; // 左
         else if (Ang >= 60 && Ang <= 120) ConnectorType = 3; // 下
         else if (Ang > 120 && Ang < 240) ConnectorType = 4; // 右
-        
-        const labelWidth = fontSize * 8;
-        const labelHeight = fontSize * 3;
+
+        // 計算寬高
+        const labelWidth = fontSize * (textMaxLen+2);
+        const labelHeight = fontSize * (tspans.length+1);
 
         const labelX = roundTo(ConnX + labelWidth * ConnectorItem[ConnectorType - 1][0], 2);
         const labelY = roundTo(ConnY + labelHeight * ConnectorItem[ConnectorType - 1][1], 2);
@@ -660,14 +692,6 @@ setWarningMarks = function() {
     // placedlabels.push({ x: labelX - spacing, y: labelY - spacing, width: labelWidth + spacing * 2, height: labelHeight + spacing * 2 });
     placedlabels[warning.type + "_mark"] = [labelX - spacing, labelY - spacing, labelWidth + spacing * 2, labelHeight + spacing * 2];
     placedLines[warning.type + "_ConnectLine"] = [ConnX, ConnY, ax, ay];
-
-    // ---------- 時間文字 ----------
-    const date = new Date(warning.time);
-    const day = String(date.getDate()).padStart(2, "0");
-    const hour = String(date.getHours()).padStart(2, "0");
-    const minute = String(date.getMinutes()).padStart(2, "0");
-    const timeStr = minute === "00" ? `${day}日${hour}時` : `${day}日${hour}時${minute}分`;
-
     bestPlacement[warning.type]['text'] = [timeStr, warning.text]
 
     // ---------- 組裝 g#warning-marks 片段 ----------
@@ -831,8 +855,8 @@ setWarningMarks = function() {
 }
 
 // 調整警報時間標記 warning_marks 大小
-setWarningMarksSize = function(fontSize = 9) {
-  $("#warning_marks > g").each(function() {
+setWarningMarksSize = function(fontSize = 9, markName = "") {
+  $(`#warning_marks > g${markName ==="" ? "" : "[name='"+markName+"']"}`).each(function() {
     const connectLine = $(this).find("line");
 
     // 讀取 line 的起點、ConnectorType
@@ -846,10 +870,34 @@ setWarningMarksSize = function(fontSize = 9) {
       [-0.5, -1], // 下
       [-1, -0.5] // 右
     ];
+    
+    // 計算字數(用於決定 label寬度)
+    let textMaxLen = 0;
+    $(this).find("text").find("tspan").each(function () {
+        let text = $(this).text();
+        let len = 0;
+
+        for (let ch of text) {
+            // 判斷是否為半形 (ASCII 範圍)
+            if (/[\u0000-\u00ff]/.test(ch)) {
+                len += 0.5;
+            } else {
+                len += 1;
+            }
+        }
+
+        console.log(text,len)
+
+        if (len > textMaxLen) {
+            textMaxLen = len;
+        }
+    });
+
+    console.log("最大加權字數：", textMaxLen);
 
     // 計算寬高
     const lines = $(this).find("text").find("tspan").length;
-    const labelWidth = fontSize * 8;
+    const labelWidth = fontSize * (textMaxLen+2);
     const labelHeight = fontSize * (lines+1);
     const lineHeight = roundTo(fontSize * 1.2,2);
 
@@ -870,9 +918,12 @@ setWarningMarksSize = function(fontSize = 9) {
     // $(this).find("text").find("tspan").last().attr("dy",lineHeight)
     $(this).find("text").find("tspan").not($(this).find("text").find("tspan").first()).attr("dy",lineHeight) // 設定非第一個<tspan> dy
 
-    $("g#warning_marks").css("font-size",fontSize)
-    $("g#warning_marks").css("stroke-width",fontSize/10)
-    $("#g_tc_timestr text").css("font-size",parseFloat(fontSize*0.75,2))
+    $("g#warning_marks")
+      .css("font-size", fontSize)
+      .css("stroke-width", fontSize / 10);
+
+    $("#g_tc_timestr text")
+      .css("font-size", (fontSize * 0.75).toFixed(2));
   });
   
   // 設定 SVG 大小位置
@@ -1197,13 +1248,13 @@ function showHideKeypoint(checkElement) {
   var $parentElement = $(checkElement).closest(".warning-group");
 
   if ($parentElement.length) {
-    var nameAttributeValue = $parentElement.attr("name");
+    var warnType = $parentElement.attr("name");
 
     if (isChecked) {
-      $("#keypoint-content div[name='" + nameAttributeValue + "']").show();
+      $("#keypoint-content div[name='" + warnType + "']").show();
       $("#keypoint").show();
     } else {
-      $("#keypoint-content div[name='" + nameAttributeValue + "']").hide();
+      $("#keypoint-content div[name='" + warnType + "']").hide();
 
       // 檢查是否所有 warning-check 都未勾選
       var allUnchecked = $(".warning-check").toArray().every(function(el) {
@@ -1226,7 +1277,7 @@ function showHideKeypoint(checkElement) {
 
 // 更新警報
 function changeWarning($warnGroup, changeType) {
-  var nameAttributeValue = $warnGroup.attr("name");
+  var warnType = $warnGroup.attr("name");
 
   if (changeType === "changeTime") {
     var $inputElement = $warnGroup.find(".warning-time");
@@ -1238,7 +1289,7 @@ function changeWarning($warnGroup, changeType) {
       $warnGroup.find(".warning-check").prop('checked', false);
 
       Warning_Data.forEach(item => {
-        if (item.type === nameAttributeValue) {
+        if (item.type === warnType) {
           item.time = '';
         }
       });
@@ -1259,7 +1310,7 @@ function changeWarning($warnGroup, changeType) {
       $warnGroup.find(".warning-check").prop('checked', true);
 
       Warning_Data.forEach(item => {
-        if (item.type === nameAttributeValue) {
+        if (item.type === warnType) {
           item.time = warningTime;
           item.source = "Self_Editing";
           $warnGroup.attr('source', "Self_Editing");
@@ -1286,17 +1337,30 @@ function changeWarning($warnGroup, changeType) {
     // TODO: 依據 warning-text 的內容更新 Warning_Data
     var newText = $warnGroup.find(".warning-text").text().replace(/：$/, '');
     console.log("更新文字：", newText);
+    
+    let obj = Warning_Data.find(function(item) {
+      return item.type === warnType;
+    });
+    console.log(warnType, obj);
 
-    Warning_Data.forEach(item => {
-      if (item.type === nameAttributeValue) {
-        item.text = newText; // 假設 Warning_Data 有 text 欄位
-        item.source = "Self_Editing";
-        $warnGroup.attr('source', "Self_Editing");
-      }
+    if (obj !== undefined) {
+      obj.text = newText; 
+      obj.source = "Self_Editing";
+      
+      $warnGroup.attr('source', "Self_Editing");
+    }
+    // 更新重要時間點 keypoint-content 與 warning_marks
+    [`#keypoint-content .warning-text[name='${warnType}'] span:eq(3)`,
+      `#warning_marks g[name='${warnType}'] text tspan:eq(1)`
+    ].forEach(sel => {
+      const $el = $(sel);
+      if ($el.length) $el.html(newText);
     });
     
-    $(`#keypoint-content .warning-text[name='${nameAttributeValue}'] span`)[3].innerHTML = newText
-    $(`#warning_marks g[name='${nameAttributeValue}'] text tspan`)[1].innerHTML = newText
+    // 調整該標記大小
+    let fontSize = parseFloat($("g#warning_marks").css("font-size"))
+    setWarningMarksSize(fontSize,warnType)
+    
   }
 }
 
