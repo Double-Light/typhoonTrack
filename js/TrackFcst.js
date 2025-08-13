@@ -83,7 +83,7 @@ get_TrackFcst_dict = function() {
         (Warning_Estimate[typhoonName] != undefined && Warning_Estimate[typhoonName]?.files?.includes(moment(data.init_time).utc().format("yyyyMMDDHHmm")))))
     .map(data => data.init_time);
 
-    // 剔除只出現一次的時間點 (tau 無>0)
+    // 剔除只出現一次的時間點 (tau 無>0代表預報尚未發)
     initTimes.forEach(initTime => {
       let count = 0;
       for (let i = 0; i < typhoon.data.length; i++) {
