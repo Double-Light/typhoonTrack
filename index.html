@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8">
     <title>颱風路徑簡報製作網頁</title>
-    <link rel="icon" href="./data/icon/TyIcon.png" type="image/x-icon">
+    <!-- <link rel="icon" href="./data/icon/TyIcon.png" type="image/x-icon"> -->
 
     <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.13.1/underscore-min.js" crossorigin="anonymous"></script>     <!-- JavaScript函式庫 -->
     <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js" crossorigin="anonymous"></script>                 <!-- jQuery -->
@@ -19,6 +19,8 @@
     <script type="text/javascript" src="./js/jquery-ui.min.js"></script>           <!-- jQuery UI-Draggable -->
     <script type="text/javascript" src="./js/moment.min.js"></script>              <!-- 時間計算 -->
     <script type="text/javascript" src="./js/html2canvas.min.js"></script>         <!-- canvas 圖表庫 -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script type="text/javascript" src="./js/gif.js"></script>                     <!-- GIF -->
     <!-- <script type="text/javascript" src="./js/gif.worker.js"></script>         <!-- GIF worker -->
 
@@ -43,17 +45,33 @@
       </div>
     </div>
     
-    <div id="progressOverlay" style="display:none;">
-      <div id="progressBox">
-        <h3>動畫建立中</h3>
-        <div id="progressText">請稍候...</div>
-        <div id="progressBarContainer">
-          <div id="progressBar"></div>
+    <div id="Modal" class="modal fade" style="display:none;">
+      <div class="modal-dialog">
+        <div class="modal-Box">
+          <div class="modal-header">
+            <h3 class="modal-title" id="modalTitle">簡報下載</h3>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="productContent">
+              
+            </div>
+            <div id="progressContent">
+              <div id="progressText">請稍候...</div>
+              <div id="progressBarContainer">
+                <div id="progressBar"></div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="modalCancelBtn" class="btn btn-secondary" onclick="$('#Modal').hide()">取消</button>
+            <button id="modalStopBtn" class="btn btn-warning ">中斷</button>
+            <button id="modalDoneBtn" class="btn btn-primary " onclick="$('#Modal').hide()">確認</button>
+          </div>
         </div>
-        <button id="progressCancelBtn">中斷</button>
-        <button id="progressDoneBtn" onclick="document.getElementById('progressOverlay').style.display='none'" style="display:none;">確認</button>
       </div>
     </div>
+
 
     <script type="text/javascript">
       function padLeft(num, lenght) {
@@ -198,7 +216,10 @@
       });
 
       // 產品產製
-      $("#slide_production").click(function() {
+       $("#slide_production").click(function() {
+        captureSlide("pdf")
+       
+        /* 
         myData = {};
         // 颱風資料
         myData['tc_info'] = {
@@ -270,8 +291,8 @@
           }
         }
 
-        console.log(myData)
-      })
+        console.log(myData) */
+      }) 
     </script>
   </body>
 </html>
