@@ -1,3 +1,9 @@
+const fontSize = 9;           // 預設字體大小
+const lineHeightScale = 1.2;  // 行高比例
+const markSpacing = 5;        // mark間距
+
+const pauseSec = 1;           // 每次動畫循環暫停秒數
+
 let LandArea = ["本島", "澎湖", "金門", "馬祖"] // 警報估計時間陸上區域限定
 
 // 陸上區域替代名詞
@@ -343,6 +349,78 @@ setKeypointContent = function() {
 
 }
 
+// 讀取內差點位
+function getInterpolatePoint(tauTime, thisData = PData, dataKeys = Object.keys(thisData[0])) {  //  tauTime: time/tau； thisData: [{...}{...}...]； dataKeys: [key1,key2,...]
+  // tauTime可以為 tau(整數) 或 time(日期時間字串)；thisData須為字典陣列形式的 Point Data，且至少有time或tau其中一個參數；dataKeys可制定回傳參數，預設為全部
+  let result = null;
+  const isNumberInput = typeof tauTime === "number" && !isNaN(tauTime);
+
+  for (let i = 1; i < thisData.length; i++) {
+    const Pre = thisData[i - 1];
+    const This = thisData[i];
+
+    let inRange = false;
+    let delta = 0;
+
+    if (isNumberInput) {
+      // 用 tau 判斷
+      inRange =
+        (tauTime <= This.tau && tauTime > Pre.tau) ||
+        (i === 1 && tauTime === Pre.tau);
+      if (inRange) {
+        delta = (tauTime - Pre.tau) / (This.tau - Pre.tau);
+      }
+    } else {
+      // 嘗試解析時間字串
+      const tauMoment = moment(tauTime);
+      if (!tauMoment.isValid()) return null;
+
+      const preMoment = moment(Pre.time);
+      const thisMoment = moment(This.time);
+
+      inRange =
+        (tauMoment.isSameOrBefore(thisMoment) &&
+         tauMoment.isAfter(preMoment)) ||
+        (i === 1 && tauMoment.isSame(preMoment));
+
+      if (inRange) {
+        delta = (tauMoment - preMoment) / (thisMoment - preMoment);
+      }
+    }
+
+    if (!inRange) continue;
+
+    result = {};
+    dataKeys.forEach(key => {
+      if (Pre[key] !== undefined && This[key] !== undefined) {
+        if (key === "time") {
+          // 時間用毫秒差內插
+          const preMoment = moment(Pre.time);
+          const thisMoment = moment(This.time);
+          const interpMoment = preMoment.clone().add((thisMoment - preMoment) * delta, "ms");
+          result[key] = interpMoment.format("YYYY-MM-DD HH:mm");
+        } else if (key == "Azimuth") {
+          result[key] = (Pre.coordinate[0] !== This.coordinate[0] || Pre.coordinate[1] !== This.coordinate[1]) ? Math.round(get_Azimuth(Pre.coordinate, This.coordinate)) : 135
+        } else if (key == "lon" || key == "lat") {
+          let i = (key == "lon") ? 0 : 1
+          result[key] = roundTo(Pre.coordinate[i] + (This.coordinate[i] - Pre.coordinate[i]) * delta,2)
+        } else if (typeof Pre[key] === "number" && typeof This[key] === "number") {
+          // 數值欄位內插
+          const precision = key.startsWith("R15") || key.startsWith("R25") ? 3 : 2;
+          result[key] = roundTo(Pre[key] + (This[key] - Pre[key]) * delta, precision);
+        } else {
+          // result[key] = delta < 0.5 ? Pre[key] : This[key];  // 非數值直接取較接近的一端
+          result[key] = This[key] // 非數值直接取下一個值
+        }
+      }
+    });
+
+    break;
+  }
+
+  return result;
+}
+
 
 
 // 繪製 警報半徑 warning_circle (計算警報位置與半徑像素)
@@ -357,10 +435,11 @@ setWarningCircle = function() {
 
   let Azimuth = 135; // 預設移向為西北
   
-
   /* --------------------------------------------------
      * Step 1 先畫出暴風半徑 (ellipse)，並計算 Warning_Data
      * --------------------------------------------------*/
+  /*      
+
   for (let i = 1; i < PData.length; i++) {
     const Pre = PData[i - 1];
     const This = PData[i];
@@ -376,7 +455,7 @@ setWarningCircle = function() {
       Azimuth = get_Azimuth(Pre.coordinate, This.coordinate);
     }
 
-    /* ----- 掃描 Warning_Data 介於 Pre.time & This.time 之間的點 -----*/
+    //  ----- 掃描 Warning_Data 介於 Pre.time & This.time 之間的點 ----- 
     Warning_Data.forEach(warning => {
       const checked = $(`.warning-group[name='${warning.type}'] .warning-check`).prop("checked");
       if (!checked || !warning.time) return;
@@ -388,25 +467,24 @@ setWarningCircle = function() {
       // 時間內插比例 (0~1)
       const delta = (moment(wTime) - moment(Pre.time)) / (moment(This.time) - moment(Pre.time));
 
-      // 內插 Lon / Lat
-      const Lon = Pre.coordinate[0] + (This.coordinate[0] - Pre.coordinate[0]) * delta;
-      const Lat = Pre.coordinate[1] + (This.coordinate[1] - Pre.coordinate[1]) * delta;
+      // 內插 lon / lat
+      const lon = Pre.coordinate[0] + (This.coordinate[0] - Pre.coordinate[0]) * delta;
+      const lat = Pre.coordinate[1] + (This.coordinate[1] - Pre.coordinate[1]) * delta;
       
       // 內插 tau
       const tauTime = Pre.tau + (This.tau - Pre.tau) * delta;
 
       // 內插 R15 / R25
-
       const R15 = (ThisR15 !== PreR15) ? (ThisR15 <= 0 && delta < 1 ? PreR15 : PreR15 + (ThisR15 - PreR15) * delta) : PreR15;
       const R25 = (ThisR25 !== PreR25) ? (ThisR25 <= 0 && delta < 1 ? PreR25 : PreR25 + (ThisR25 - PreR25) * delta) : PreR25
 
 
       // 麥卡托投影
-      const ax = roundTo((Lon - Map_Range[0]) * per_Lon, 2);
-      const ay = roundTo((Lat - Map_Range[3]) * per_Lat, 2);
-      const R15_x = roundTo(((R15 / 110 * per_Lon) / Math.cos((Lat * Math.PI) / 180)), 3);
+      const ax = roundTo((lon - Map_Range[0]) * per_Lon, 2);
+      const ay = roundTo((lat - Map_Range[3]) * per_Lat, 2);
+      const R15_x = roundTo(((R15 / 110 * per_Lon) / Math.cos((lat * Math.PI) / 180)), 3);
       const R15_y = roundTo(((R15 / 110) * per_Lon), 3);
-      const R25_x = roundTo(((R25 / 110 * per_Lon) / Math.cos((Lat * Math.PI) / 180)), 3);
+      const R25_x = roundTo(((R25 / 110 * per_Lon) / Math.cos((lat * Math.PI) / 180)), 3);
       const R25_y = roundTo(((R25 / 110) * per_Lon), 3);
 
       // 將 ellipse 加入序列化字串 (之後一次寫入 DOM)
@@ -418,8 +496,8 @@ setWarningCircle = function() {
 
       // 對 Warning_Data 寫回計算結果
       Object.assign(warning, {
-        lon: roundTo(Lon, 2),
-        lat: roundTo(Lat, 2),
+        lon: roundTo(lon, 2),
+        lat: roundTo(lat, 2),
         tau:tauTime,
         ax,
         ay,
@@ -433,6 +511,34 @@ setWarningCircle = function() {
       });
     });
   }
+  */
+  
+  Warning_Data.forEach(warning => {
+    const {time,tau, lon, lat, ax, ay, R15_x, R15_y, R25_x, R25_y} = getInterpolatePoint(warning.time, PData,["time", "tau", "lon", "lat", "ax", "ay", "R15_x", "R15_y", "R25_x", "R25_y"])
+    
+    // 將 ellipse 加入序列化字串 (之後一次寫入 DOM)
+    xRadius += `
+    <g class="${warning.time < xPData[0].time ? "mark-past" : "mark-fcst"}" name="${warning.type}">
+      <ellipse cx="${ax}" cy="${ay}" rx="${R15_x}" ry="${R15_y}" ${warning.time < xPData[0].time ? 'style="stroke: #CACACA;"' : 'style="stroke: #FFCACA;"'}/>
+      <use x="${ax}" y="${ay}" href="${warning.time < xPData[0].time ? '#tyIcon_past_light' : '#tyIcon_fcst_light'}"></use>
+    </g>`;
+
+    // 對 Warning_Data 寫回計算結果
+    Object.assign(warning, {
+      lon: roundTo(lon, 2),
+      lat: roundTo(lat, 2),
+      tau:tau,
+      ax,
+      ay,
+      R15,
+      R25,
+      R15_x,
+      R15_y,
+      R25_x,
+      R25_y,
+      Azimuth: Math.round(Azimuth)
+    });
+  });
 
   // 批次寫入 ellipse
   $("g#warning_circle").html(xRadius);
@@ -448,8 +554,6 @@ setWarningMarks = function() {
 
   const Azimuths = Warning_Data.filter(w => w.Azimuth !== undefined).map(w => w.Azimuth);
   const avgAzimuth = getAverageAzimuth(Azimuths);
-  const fontSize = 9;
-  const spacing = 5; // mark間距
   const ConnectorItem = [
     [-0.5, 0], // 上
     [0, -0.5], // 左
@@ -524,28 +628,9 @@ setWarningMarks = function() {
     const minute = String(date.getMinutes()).padStart(2, "0");
     const timeStr = minute === "00" ? `${day}日${hour}時` : `${day}日${hour}時${minute}分`;
     
-    // 計算字數(用於決定 label寬度)
-    tspans = [timeStr, warning.text]
-    let textMaxLen = 0;
-
-    tspans.forEach((text) => {
-        let len = 0;
-        for (let ch of text) {
-            // 判斷是否為半形 (ASCII 範圍)
-            if (/[\u0000-\u00ff]/.test(ch)) {
-                len += 0.5;
-            } else {
-                len += 1;
-            }
-        }
-
-        // console.log(text, len);
-
-        if (len > textMaxLen) {
-            textMaxLen = len;
-        }
-    });
-
+    // 建立描述文字字串 (用於決定 label寬度與高度)
+    let tspans = [timeStr, warning.text]
+    let textMaxLen = 0; tspans.forEach(t => { let l=0; for (let c of t) l += /[\u0000-\u00ff]/.test(c) ? 0.5 : 1; if (l > textMaxLen) textMaxLen = l; });  // 計算字數(用於決定 label寬度)
     // console.log("最大加權字數：", textMaxLen);
 
     // console.log(warning.type);
@@ -570,12 +655,13 @@ setWarningMarks = function() {
         // 計算寬高
         const labelWidth = fontSize * (textMaxLen+2);
         const labelHeight = fontSize * (tspans.length+1);
+        const lineHeight = roundTo(fontSize * lineHeightScale,2);  // 行高
 
         const labelX = roundTo(ConnX + labelWidth * ConnectorItem[ConnectorType - 1][0], 2);
         const labelY = roundTo(ConnY + labelHeight * ConnectorItem[ConnectorType - 1][1], 2);
 
-        // const box = { x: labelX - spacing, y: labelY - spacing, width: labelWidth + spacing * 2, height: labelHeight + spacing * 2 };
-        const box = [labelX - spacing, labelY - spacing, labelWidth + spacing * 2, labelHeight + spacing * 2];
+        // const box = { x: labelX - markSpacing, y: labelY - markSpacing, width: labelWidth + markSpacing * 2, height: labelHeight + markSpacing * 2 };
+        const box = [labelX - markSpacing, labelY - markSpacing, labelWidth + markSpacing * 2, labelHeight + markSpacing * 2];
         const connect = [ConnX, ConnY, ax, ay];
 
         // ---------- 進行碰撞檢查與評分 ----------
@@ -689,13 +775,13 @@ setWarningMarks = function() {
     } = bestPlacement[warning.type];
     // console.log(warning.type, score, Ang, dR);
 
-    // placedlabels.push({ x: labelX - spacing, y: labelY - spacing, width: labelWidth + spacing * 2, height: labelHeight + spacing * 2 });
-    placedlabels[warning.type + "_mark"] = [labelX - spacing, labelY - spacing, labelWidth + spacing * 2, labelHeight + spacing * 2];
+    // placedlabels.push({ x: labelX - markSpacing, y: labelY - markSpacing, width: labelWidth + markSpacing * 2, height: labelHeight + markSpacing * 2 });
+    placedlabels[warning.type + "_mark"] = [labelX - markSpacing, labelY - markSpacing, labelWidth + markSpacing * 2, labelHeight + markSpacing * 2];
     placedLines[warning.type + "_ConnectLine"] = [ConnX, ConnY, ax, ay];
     bestPlacement[warning.type]['text'] = [timeStr, warning.text]
 
     // ---------- 組裝 g#warning-marks 片段 ----------
-    const lineHeight = roundTo(fontSize * 1.2,2);
+    const lineHeight = roundTo(fontSize * lineHeightScale,2);  // 行高
     const lines = 2;
     const textHeight = lineHeight * lines;
     const textStartY = roundTo(labelY + (labelHeight - textHeight) / 2 + fontSize,2); // 修正基線位置
@@ -871,35 +957,16 @@ setWarningMarksSize = function(fontSize = 9, markName = "") {
       [-1, -0.5] // 右
     ];
     
-    // 計算字數(用於決定 label寬度)
-    let textMaxLen = 0;
-    $(this).find("text").find("tspan").each(function () {
-        let text = $(this).text();
-        let len = 0;
-
-        for (let ch of text) {
-            // 判斷是否為半形 (ASCII 範圍)
-            if (/[\u0000-\u00ff]/.test(ch)) {
-                len += 0.5;
-            } else {
-                len += 1;
-            }
-        }
-
-        console.log(text,len)
-
-        if (len > textMaxLen) {
-            textMaxLen = len;
-        }
-    });
+    let tspans = $("g#warning_marks g[name='warning_center_contact'] text tspan").map((_,el)=>$(el).text()).get()
+    let textMaxLen = Math.max(...tspans.map(t=>[...t].reduce((len,ch)=>len+(/[\u0000-\u00ff]/.test(ch)?0.5:1),0)));
 
     console.log("最大加權字數：", textMaxLen);
+    const lines = $(this).find("text").find("tspan").length;
 
     // 計算寬高
-    const lines = $(this).find("text").find("tspan").length;
     const labelWidth = fontSize * (textMaxLen+2);
-    const labelHeight = fontSize * (lines+1);
-    const lineHeight = roundTo(fontSize * 1.2,2);
+    const labelHeight = fontSize * (tspans.length+1);
+    const lineHeight = roundTo(fontSize * lineHeightScale,2);  // 行高
 
 
     // 計算 label 的左上角位置
@@ -930,6 +997,84 @@ setWarningMarksSize = function(fontSize = 9, markName = "") {
   change_SVG_Size()
 }
 
+// 建立動畫參數
+function getTcAniDatas (aniStartTau = 0,aniEndTau = xPData[xPData.length-1]['tau']) {
+  AD = [];  // 先清空陣列
+  
+  // console.log(aniStartTau,aniEndTau,endBegin);
+  
+  // 起始 dt=0
+/*   for (let i = 1; i < PData.length; i++) {
+    const Pre = PData[i - 1];
+    const This = PData[i];
+
+    // 僅在 aniStartTau 位於 Pre.tau 與 This.tau 之間時才處理
+    if (!(aniStartTau < This.tau && aniStartTau > Pre.tau)) continue;
+
+    const delta = (aniStartTau - Pre.tau) / (This.tau - Pre.tau);
+
+    const PreTime = moment(Pre.time);
+    const ThisTime = moment(This.time);
+    const interpolatedTime = PreTime.clone().add(delta * (ThisTime.diff(PreTime)), 'milliseconds');
+
+    AD.push({
+      type: "start",
+      time: interpolatedTime.format('DD日HH時mm分').replace("00分", ""),
+      tau: aniStartTau,
+      ax: roundTo(Pre.ax + (This.ax - Pre.ax) * delta, 2),
+      ay: roundTo(Pre.ay + (This.ay - Pre.ay) * delta, 2),
+      R15_x: roundTo(Pre.R15_x + (This.R15_x - Pre.R15_x) * delta, 3),
+      R15_y: roundTo(Pre.R15_y + (This.R15_y - Pre.R15_y) * delta, 3),
+      R25_x: roundTo(Pre.R25_x + (This.R25_x - Pre.R25_x) * delta, 3),
+      R25_y: roundTo(Pre.R25_y + (This.R25_y - Pre.R25_y) * delta, 3)
+    });
+    break;
+  } */
+
+  AD.push((() => {
+    const p = getInterpolatePoint(aniStartTau, PData, ["time", "tau", "ax", "ay", "R15_x", "R15_y", "R25_x", "R25_y"]);
+    const { time, ...rest } = p;
+    return {type: "start", time: moment(p.time).format('DD日HH時mm分').replace("00分", ""), ...rest };
+  })());
+
+  // 先篩選排序好，再用 forEach push
+  [...PData, ...warning_data]
+    .filter(item => item.tau > aniStartTau && item.tau <= aniEndTau)
+    .sort((a, b) => a.tau - b.tau)
+    .forEach(item => {
+      let Obj = AD.find(d => d.tau === item.tau); // 找 tau 一樣的
+      if (Obj) {
+        // 已存在 → 更新 type
+        if (Obj.type != "fcst" && Obj.type != "curr" && Obj.type != "past") {Obj.type =  item.type;}
+      } else {
+        // 不存在 → 新增
+        AD.push({
+          type: (item.type === "fcst" || item.type === "curr" || item.type === "past")
+            ? `${item.type}_${Math.abs(item.tau)}`
+            : item.type,
+          time: moment(item.time).format('DD日HH時mm分').replace("00分", ""),
+          tau: item.tau,
+          ax: item.ax,
+          ay: item.ay,
+          R15_x: item.R15_x,
+          R15_y: item.R15_y,
+          R25_x: item.R25_x,
+          R25_y: item.R25_y
+        });
+      }
+    });
+    
+    
+  // 計算dt
+  AD.forEach((item, i) => {
+    item.dt = i > 0 ? (item.tau - AD[i - 1].tau) / perHr : (item.tau - aniStartTau) / perHr;
+  });
+  
+  return AD
+
+  // console.log("AniDatas:", AD);
+}
+
 
 // 建立暴風半徑動畫
 function setTcAnimate (aniType="all") {
@@ -941,9 +1086,11 @@ function setTcAnimate (aniType="all") {
 
   if ($("#btn_animsEnable").prop("checked")) { // 動畫模式
     // console.log("動畫模式")
+    
+    // 預設起訖時間
     let aniStartTau = 0
     let aniEndTau = xPData[xPData.length-1]['tau']
-    
+
     // console.log(aniType)
     
     if (aniType == "all") {  // 全預報時段動畫
@@ -952,7 +1099,21 @@ function setTcAnimate (aniType="all") {
     } else {                 // 區段動畫
       // aniStartTau = Math.max(warning_data.find(item => item.type === aniType).tau,0)
       // aniStartTau = warning_data.find(item => item.type === aniType).tau 
-      aniStartTau = Math.max(warning_data.find(item => item.type === aniType).tau - 12 ,0)
+      // aniStartTau = Math.max(warning_data.find(item => item.type === aniType).tau - 12 ,0)
+
+      aniEndTau = warning_data.find(item => item.type === aniType).tau 
+      
+      for (i = warning_data.length-1; i >=0; i--) {
+        // console.log(i,warning_data[i]["tau"])
+        if (warning_data[i]["tau"]<aniEndTau && $(`#warning_estimate_list .warning-group[name='${warning_data[i].type}'] .warning-check`).prop("checked")){
+          aniStartTau = warning_data[i]["tau"]
+          break;
+        }
+        if (i === 0){
+          aniStartTau = Math.max(aniEndTau-12, PData[0].tau);
+        }
+      }
+      
       // 只顯示該時間點預報標記
       // $("#warning_marks .mark-fcst").hide()
       // $(`#warning_marks .mark-fcst[name='${aniType}']`).show()
@@ -963,64 +1124,23 @@ function setTcAnimate (aniType="all") {
     
     // console.log(aniType,aniStartTau,aniEndTau);
     
-    aniDatas = [];  // 先清空陣列
+    // 建立動畫參數 aniDatas、aniParas (全域變數)
+    aniDatas = getTcAniDatas (aniStartTau,aniEndTau) // 建立動畫參數 aniDatas
     
-    // 起始 dt=0
-    for (let i = 1; i < PData.length; i++) {
-      const Pre = PData[i - 1];
-      const This = PData[i];
+    // let AD = JSON.parse(JSON.stringify(aniDatas)) // 複製 aniDatas
 
-      // 僅在 aniStartTau 位於 Pre.tau 與 This.tau 之間時才處理
-      if (!(aniStartTau < This.tau && aniStartTau > Pre.tau)) continue;
 
-      const delta = (aniStartTau - Pre.tau) / (This.tau - Pre.tau);
-
-      const PreTime = moment(Pre.time);
-      const ThisTime = moment(This.time);
-      const interpolatedTime = PreTime.clone().add(delta * (ThisTime.diff(PreTime)), 'milliseconds');
-
-      aniDatas.push({
-        type: "start",
-        time: interpolatedTime.format('DD日HH時mm分').replace("00分", ""),
-        tau: aniStartTau,
-        ax: roundTo(Pre.ax + (This.ax - Pre.ax) * delta, 2),
-        ay: roundTo(Pre.ay + (This.ay - Pre.ay) * delta, 2),
-        R15_x: roundTo(Pre.R15_x + (This.R15_x - Pre.R15_x) * delta, 3),
-        R15_y: roundTo(Pre.R15_y + (This.R15_y - Pre.R15_y) * delta, 3),
-        R25_x: roundTo(Pre.R25_x + (This.R25_x - Pre.R25_x) * delta, 3),
-        R25_y: roundTo(Pre.R25_y + (This.R25_y - Pre.R25_y) * delta, 3)
-      });
-
-      break;
+    // 新贈結尾暫停
+    if (pauseSec > 0){
+      aniDatas.push(
+        Object.assign({}, aniDatas[aniDatas.length - 1], {
+          type: "end_stop",
+          tau: aniDatas[aniDatas.length - 1].tau,
+          dt:pauseSec
+        })
+      );
     }
 
-
-    // 先篩選排序好，再用 forEach push
-    [...PData, ...warning_data]
-      .filter(item => item.tau >= aniStartTau && item.tau <= aniEndTau)
-      .sort((a, b) => a.tau - b.tau)
-      .forEach(item => {
-        aniDatas.push({
-          type: (item.type === "fcst" || item.type === "curr") ? `${item.type}_${item.tau}` : item.type,
-          time: moment(item.time).format('DD日HH時mm分').replace("00分", ""),
-          tau: item.tau,
-          ax: item.ax,
-          ay: item.ay,
-          R15_x: item.R15_x,
-          R15_y: item.R15_y,
-          R25_x: item.R25_x,
-          R25_y: item.R25_y
-        });
-      });
-
-      
-    // 計算dt
-    aniDatas.forEach((item, i) => {
-      item.dt = i > 0 ? (item.tau - aniDatas[i - 1].tau) / perHr : (item.tau - aniStartTau) / perHr;
-    });
-
-    // console.log("aniDatas:", aniDatas);
-    
     aniParas = {
       "time" : aniDatas.map(item => item.time),
       "tau" : aniDatas.map(item => item.tau),
@@ -1046,65 +1166,77 @@ function setTcAnimate (aniType="all") {
     // 新增 keyTimes、dur、perHr參數
     aniParas.keyTimes = cumulative.map(x => (x / dur).toFixed(3));
     aniParas.dur = dur;
+    aniParas.pauseSec = pauseSec;
     aniParas.perHr = perHr;
     
     // console.log("aniParas:", aniParas);
     
     let keyTimes = aniParas.keyTimes.join(";")
-    let keyTimes_color = `0;${roundTo((0-aniStartTau)/(aniEndTau-aniStartTau),3)};${roundTo((0-aniStartTau)/(aniEndTau-aniStartTau),3)};1`
-    let aniAttr = `repeatCount=${aniType!="all" ? "indefinite" : "indefinite"}`
+    let aniAttr = aniType!="all" ? 'repeatCount="indefinite"' : 'repeatCount="indefinite"'
+    
+    let keyTimes_color = "0;1;1;1"
+    if (aniStartTau <= 0 && aniEndTau >= 0) {
+      keyTimes_color = `0;${roundTo((0-aniStartTau)/dur/perHr,3)};${roundTo((0-aniStartTau)/dur/perHr,3)};1`
+    }
     
     xRadius = `
       <g id="g_tc_R15"> <!-- R15暴風圈 -->  
-        <ellipse id="tc_R15" cx="${aniParas.ax[0]}" cy="${aniParas.ay[0]}" rx="${aniParas.R15_x[0]}" ry="${aniParas.R15_y[0]}" stroke="#F00" fill="#FFC9C9B3" stroke-width="1.0">
+        <ellipse id="tc_R15" cx="${aniParas.ax[0]}" cy="${aniParas.ay[0]}" rx="${aniParas.R15_x[0]}" ry="${aniParas.R15_y[0]}" ${aniStartTau>=0 ? 'stroke="#F00" fill="#FFC9C9B3"' : 'stroke="#808080" fill="#FFFCE7B3"'} stroke-width="1.0">
           <animate attributeName="cx" dur="${dur}" ${aniAttr} values="${aniParas.ax.join(";")}" keyTimes="${keyTimes}" />
           <animate attributeName="cy" dur="${dur}" ${aniAttr} values="${aniParas.ay.join(";")}" keyTimes="${keyTimes}" />
           <animate attributeName="rx" dur="${dur}" ${aniAttr} values="${aniParas.R15_x.join(";")}" keyTimes="${keyTimes}" />
           <animate attributeName="ry" dur="${dur}" ${aniAttr} values="${aniParas.R15_y.join(";")}" keyTimes="${keyTimes}" />
-          ${aniStartTau<0 ? `<animate attributeName="stroke" dur="${dur}" ${aniAttr} values="#808080;#808080;#F00;#F00" keyTimes="${keyTimes_color}" />` : ''}
-          ${aniStartTau<0 ? `<animate attributeName="fill" dur="${dur}" ${aniAttr} values="#FFFCE7B3;#FFFCE7B3;#FFC9C9B3;#FFC9C9B3" keyTimes="${keyTimes_color}" />` : ''}
+          ${aniStartTau <= 0 && aniEndTau >= 0 ? `<animate attributeName="stroke" dur="${dur}" ${aniAttr} values="#808080;#808080;#F00;#F00" keyTimes="${keyTimes_color}" />` : ''}
+          ${aniStartTau <= 0 && aniEndTau >= 0 ? `<animate attributeName="fill" dur="${dur}" ${aniAttr} values="#FFFCE7B3;#FFFCE7B3;#FFC9C9B3;#FFC9C9B3" keyTimes="${keyTimes_color}" />` : ''}
         </ellipse>
       </g>
       <g id="g_tc_R25"> <!-- R25暴風圈 -->  
-        <ellipse id="tc_R25" cx="${aniParas.ax[0]}" cy="${aniParas.ay[0]}" rx="${aniParas.R25_x[0]}" ry="${aniParas.R25_y[0]}" fill="#FF717180" stroke-width="0">
+        <ellipse id="tc_R25" cx="${aniParas.ax[0]}" cy="${aniParas.ay[0]}" rx="${aniParas.R25_x[0]}" ry="${aniParas.R25_y[0]}" ${aniStartTau>=0 ? 'fill="#FF717180"' : 'fill="#f0e22480"'}>
           <animate attributeName="cx" dur="${dur}" ${aniAttr} values="${aniParas.ax.join(";")}" keyTimes="${keyTimes}" />
           <animate attributeName="cy" dur="${dur}" ${aniAttr} values="${aniParas.ay.join(";")}" keyTimes="${keyTimes}" />
           <animate attributeName="rx" dur="${dur}" ${aniAttr} values="${aniParas.R25_x.join(";")}" keyTimes="${keyTimes}" />
           <animate attributeName="ry" dur="${dur}" ${aniAttr} values="${aniParas.R25_y.join(";")}" keyTimes="${keyTimes}" />
-          ${aniStartTau<0 ? `<animate attributeName="fill" dur="${dur}" ${aniAttr} values="#f0e22480;#f0e22480;#FF717180;#FF717180" keyTimes="${keyTimes_color}" />` : ''}
+          ${aniStartTau <= 0 && aniEndTau >= 0 ? `<animate attributeName="fill" dur="${dur}" ${aniAttr} values="#f0e22480;#f0e22480;#FF717180;#FF717180" keyTimes="${keyTimes_color}" />` : ''}
         </ellipse>
       </g>
       <g id="g_tc_center"> <!-- 中心 -->  
-        <use id="tc_center" x="${aniParas.ax[0]}" y="${aniParas.ay[0]}" href="${aniStartTau < 0 ? '#tyIcon_past' : '#tyIcon_fcst'}">
+        <use id="tc_center" x="${aniParas.ax[0]}" y="${aniParas.ay[0]}" href="${aniStartTau>=0 ? '#tyIcon_fcst' : '#tyIcon_past'}">
           <animate attributeName="x" dur="${dur}" ${aniAttr} values="${aniParas.ax.join(";")}" keyTimes="${keyTimes}" />
           <animate attributeName="y" dur="${dur}" ${aniAttr} values="${aniParas.ay.join(";")}" keyTimes="${keyTimes}" />
-          ${aniStartTau < 0 ? `<animate attributeName="href" dur="${dur}" ${aniAttr} values="#tyIcon_past;#tyIcon_past;#tyIcon_fcst;##tyIcon_fcst" keyTimes="${keyTimes_color}" />` : ''}
+          ${aniStartTau <= 0 && aniEndTau >= 0 ? `<animate attributeName="href" dur="${dur}" ${aniAttr} values="#tyIcon_past;#tyIcon_past;#tyIcon_fcst;##tyIcon_fcst" keyTimes="${keyTimes_color}" />` : ''}
         </use>
       </g>`
+      
+    // console.log(xRadius)
     
     // 建立標記動畫
     Warning_Data.forEach(item => {
-      if (item.tau > aniStartTau && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
-        const $target = $(`#warning_marks .mark-fcst[name='${item.type}']`);
+      if (item.tau >= 0 && item.tau > aniStartTau && item.tau <= aniEndTau && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
+        const $target = $(`#warning_marks g.mark-fcst[name='${item.type}']`);
+        
+        if ($target.length > 0) {
+          // 建立 SVG animate 元素
+          const SVG_NS = "http://www.w3.org/2000/svg";
+          const animate = document.createElementNS(SVG_NS, "animate");
 
-        // 建立 SVG animate 元素
-        const SVG_NS = "http://www.w3.org/2000/svg";
-        const animate = document.createElementNS(SVG_NS, "animate");
+          animate.setAttribute("attributeName", "opacity");
+          animate.setAttribute("dur", dur);
+          animate.setAttribute("repeatCount", "indefinite");
+          animate.setAttribute("values", "0;0;1;1;0");
 
-        animate.setAttribute("attributeName", "opacity");
-        animate.setAttribute("dur", dur);
-        animate.setAttribute("repeatCount", "indefinite");
-        animate.setAttribute("values", "0;0;1;1;0");
+          const t = roundTo((item.tau - aniStartTau) / dur / perHr, 3);
+          // console.log(item.type, t, `0;${t};${t};${roundTo((dur-0.25)/dur, 3)>t ? roundTo((dur-0.25)/dur, 3) : t};1`)
+          animate.setAttribute("keyTimes", `0;${t};${t};${(roundTo((dur-0.25)/dur, 3)>t ) ? roundTo((dur-0.25)/dur, 3) : t};1`);
 
-        const t = roundTo((item.tau - aniStartTau) / dur / perHr, 3);
-        animate.setAttribute("keyTimes", `0;${t};${t};${roundTo((dur-0.25)/dur, 3)};1`);
+          animate.setAttribute("fill", "freeze");
+          
+          // console.log(animate)
 
-        animate.setAttribute("fill", "freeze");
-
-        // 插入 animate 元素
-        $target[0].appendChild(animate);
+          // 插入 animate 元素
+          $target[0].appendChild(animate);
+        }
       }
-      });
+    });
     
   } else {  // 靜態模式
     // console.log("靜態模式")
@@ -1135,7 +1267,7 @@ function setTcAnimate (aniType="all") {
         }
       });
         
-      for (let i = 1; i < PData.length; i++) {
+      /* for (let i = 1; i < PData.length; i++) {
         const Pre = PData[i - 1];
         const This = PData[i];
 
@@ -1150,7 +1282,8 @@ function setTcAnimate (aniType="all") {
         R25_x = roundTo(Pre.R25_x + (This.R25_x - Pre.R25_x) * delta, 3);
         R25_y = roundTo(Pre.R25_y + (This.R25_y - Pre.R25_y) * delta, 3);
         break; // ✅ 找到後就跳出
-      }
+      } */
+      ({time, ax, ay, R15_x, R15_y, R25_x, R25_y} = getInterpolatePoint(tauTime, PData,["time", "ax", "ay", "R15_x", "R15_y", "R25_x", "R25_y"]))
       
       // $("#warning_marks .mark-fcst").hide()
       $("#warning_marks .mark-fcst").css("opacity", "0")
@@ -1187,45 +1320,21 @@ function setTcAnimate (aniType="all") {
         <ellipse id="tc_R25" cx="${ax}" cy="${ay}" rx="${R25_x}" ry="${R25_y}" ${tauTime>=0 ? 'fill="#FF717180"' : 'fill="#f0e22480"'} stroke-width="0"></ellipse>
       </g>
       <g id="g_tc_center">
-        <use id="tc_center" x="${ax}" y="${ay}" href="${tauTime<0 ? '#tyIcon_past' : '#tyIcon_fcst'}"></use>
+        <use id="tc_center" x="${ax}" y="${ay}" href="${tauTime>=0 ? '#tyIcon_fcst' : '#tyIcon_past'}"></use>
       </g>
       <g id="g_tc_timestr" style="transform: translate(${R15_x*0.25}px, ${R15_y*0.25}px);">
         <text x="${ax}" y="${ay}" style="font-size: ${parseFloat(parseInt($("#warning_marks").css("font-size"))*0.75,2)}px;"><tspan>${moment(time).format('DD日HH時mm分').replace("00分", "")}</tspan></text>
       </g>`;
   }
-  
   $("g#tc_circle").html(xRadius)
 }
 
-
+// 繪製TcCircle
 function setTcCircle(tauTime=0 ,$svg=$("svg#basemap")) {
   $svg.find("g#tc_circle").contents().remove();
   let xRadius = ""
   
-  for (let i = 1; i < PData.length; i++) {
-    const Pre = PData[i - 1];
-    const This = PData[i];
-
-    if (!((tauTime <= This.tau && tauTime > Pre.tau) || (i === 1 && tauTime === Pre.tau))) continue;
-    const delta = (tauTime - Pre.tau) / (This.tau - Pre.tau);
-    
-    time = moment(Pre.time) + (moment(This.time) - moment(Pre.time)) * delta
-    ax = roundTo(Pre.ax + (This.ax - Pre.ax) * delta, 2);
-    ay = roundTo(Pre.ay + (This.ay - Pre.ay) * delta, 2);
-    R15_x = roundTo(Pre.R15_x + (This.R15_x - Pre.R15_x) * delta, 3);
-    R15_y = roundTo(Pre.R15_y + (This.R15_y - Pre.R15_y) * delta, 3);
-    R25_x = roundTo(Pre.R25_x + (This.R25_x - Pre.R25_x) * delta, 3);
-    R25_y = roundTo(Pre.R25_y + (This.R25_y - Pre.R25_y) * delta, 3);
-    break; // ✅ 找到後就跳出
-  }
-  
-  $svg.find("#warning_marks .mark-fcst").hide()
-  $svg.find("#keypoint .warning-text").removeClass("active")
-  Warning_Data.forEach(item => {
-    if (item.tau <= tauTime && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
-      $svg.find(`#warning_marks .mark-fcst[name='${item.type}']`).show()
-    }
-  });
+  const {time, ax, ay, R15_x, R15_y, R25_x, R25_y} = getInterpolatePoint(tauTime, PData,["time", "ax", "ay", "R15_x", "R15_y", "R25_x", "R25_y"])
   
   xRadius = `
     <g id="g_tc_R15">
@@ -1239,6 +1348,15 @@ function setTcCircle(tauTime=0 ,$svg=$("svg#basemap")) {
     </g>`;
     
   $svg.find("g#tc_circle").html(xRadius)
+  
+  // 標記顯示/隱藏
+  $svg.find("#warning_marks .mark-fcst").hide()
+  $svg.find("#keypoint .warning-text").removeClass("active")
+  Warning_Data.forEach(item => {
+    if (item.tau <= tauTime && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
+      $svg.find(`#warning_marks .g[name='${item.type}']`).show()
+    }
+  });
 }
 
 
@@ -1277,6 +1395,7 @@ function showHideKeypoint(checkElement) {
 
 // 更新警報
 function changeWarning($warnGroup, changeType) {
+  // console.log("呼叫 changeWarning")
   var warnType = $warnGroup.attr("name");
 
   if (changeType === "changeTime") {
@@ -1385,7 +1504,7 @@ function decrementHour(button) {
 
 
 // 雙擊 warning-text 進入編輯模式
-$(document).on("dblclick", ".warning-text", function () {
+$(document).on("dblclick", "#warning_estimate_list .warning-text", function () {
   var $this = $(this);
   var originalText = $this.text().replace(/：$/, '');
   var $input = $("<input type='text' class='warning-text-edit'>").val(originalText);
@@ -1416,7 +1535,7 @@ $(function () {
       let obj = Warning_Data.find(function(item) {
         return item.type === selfType;
       });
-      console.log(selfType, obj);
+      // console.log(selfType, obj);
 
       if (obj == undefined) {
         let item = {
