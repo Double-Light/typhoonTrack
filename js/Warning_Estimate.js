@@ -1354,7 +1354,7 @@ function setTcCircle(tauTime=0 ,$svg=$("svg#basemap")) {
   $svg.find("#keypoint .warning-text").removeClass("active")
   Warning_Data.forEach(item => {
     if (item.tau <= tauTime && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
-      $svg.find(`#warning_marks .g[name='${item.type}']`).show()
+      $svg.find(`#warning_marks g[name='${item.type}']`).show()
     }
   });
 }

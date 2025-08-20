@@ -330,7 +330,7 @@ async function captureSlide(mode = "clipboard") {
         // 1. 底圖層（baseLayer）：複製 svg 並移除 warning 標記圖層
         let $svgClone = $("#basemap").clone();
         // $svgClone.find("g#warning_range, foreignObject").remove();  // 移除  warning_range 、foreignObject
-        $svgClone.find("g#warning_marks .mark-fcst, g#tc_circle, foreignObject").remove();  // 移除  warning_marks .mark-fcst 與  #tc_circle 、foreignObject
+        $svgClone.find("g#warning_marks .mark-fcst, g#tc_circle, foreignObject, animate").remove();  // 移除  warning_marks .mark-fcst 與  #tc_circle 、foreignObject
 
         const $baseDiv = $("<div id='baseDiv'>").css({
           position: "absolute",
@@ -357,7 +357,7 @@ async function captureSlide(mode = "clipboard") {
         // 2. 動畫層（animLayer）
         $svgClone = $("#basemap").clone();
         // $svgClone.find(">g:not(#warning_range), foreignObject").remove();  
-        $svgClone.find("defs style, defs>g:not(#tyIcon_past,#tyIcon_fcst), >g:not(#warning_range), g#warning_circle,g#warning_marks .mark-past, foreignObject").remove() // 只留下 #warning_marks .mark-fcst 與  #tc_circle
+        $svgClone.find("defs style, defs>g:not(#tyIcon_past,#tyIcon_fcst), >g:not(#warning_range), g#warning_circle,g#warning_marks .mark-past, foreignObject, animate").remove() // 只留下 #warning_marks .mark-fcst 與  #tc_circle
         
         const $animDiv = $("<div id='animDiv'>").css({
           position: "absolute",
