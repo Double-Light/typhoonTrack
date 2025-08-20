@@ -239,10 +239,10 @@ async function captureSlide(mode = "clipboard") {
       const $originalSlide = $slideDiv.detach();
       $svgObj.append($originalSlide); 
       
-      if ($slideDiv.length === 0) {
-        alert("未找到 foreignObject 中的 #slide");
-        return;
-      }
+      // if ($slideDiv.length === 0) {
+        // alert("未找到 foreignObject 中的 #slide");
+        // return;
+      // }
       
       // ✅ 2. 使用 html2canvas 擷取 foreignObject 可見畫面
       if (mode != "gif") {
@@ -370,8 +370,9 @@ async function captureSlide(mode = "clipboard") {
         
         // 3. 標題層（topLayer），擷取 silde（HTML文字區）
         $svgClone = $("#basemap").clone();
-        // $svgClone.find("g#warning_range, foreignObject").remove();  // 移除  warning_range 、foreignObject
+        // $slideClone.find("g#warning_range, foreignObject").remove();  // 移除  warning_range 、foreignObject
         $svgClone.find(">g").remove();  // 只留下foreignObject
+        $svgClone.find("foreignObject").append($("#slide").clone())
 
         const $topDiv = $("<div id='topDiv'>").css({
           position: "absolute",
@@ -441,7 +442,6 @@ async function captureSlide(mode = "clipboard") {
           // 將各圖層放大後合成
           ctx.drawImage(baseCanvas, 0, 0);
           ctx.drawImage(animCanvas, 0, 0);
-          // ctx.drawImage(croppedCanvas, relX * scaleFactor, relY * scaleFactor); // 貼到原來位置
           ctx.drawImage(topCanvas, 0, 0);
 
           gif.addFrame(mergedCanvas, { delay: (frame + 1 > totalFrames && aniParas.pauseSec > 0) ? 1000 * aniParas.pauseSec :1000 / fps });
@@ -489,7 +489,7 @@ async function captureSlide(mode = "clipboard") {
     alert("截圖發生錯誤！");
   } finally {
     // ✅ 還原原始 foreignObject 結構
-    // if (typeof $originalSlide == 'object') {$foreignObj.append($originalSlide)};
+    if (typeof $originalSlide == 'object') {$foreignObj.append($originalSlide)};
     if ($("svg#basemap foreignObject").find("#slide").length === 0) {
       $("svg#basemap foreignObject").append($("#slide"))
     }
