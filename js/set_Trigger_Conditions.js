@@ -108,8 +108,6 @@ setTriggerConditions = function() {
     }
   }
 
-
-
   $("#btn_fullscreen").on("click", () => {
     const el = $zoom[0];
     // console.log("#btn_fullscreen on click");
@@ -193,11 +191,23 @@ setTriggerConditions = function() {
     }
   });
 
+  // 7. 下載功能
   $("#slide_production").on("click", () => captureSlide("pdf"));
   $("#btn_screenshot").on("click", () => captureSlide("clipboard"));
   $("#btn_download_png").on("click", () => captureSlide("png"));
   $("#btn_download_gif").on("click", () => captureSlide("gif"));
   $("#btn_download_svg").on("click", () => captureSlide("svg"));
+  
+  // 8. Modal
+  
+  // 中斷按鈕
+  $("#modalStopBtn").off("click").on("click", () => {
+    cancelProgress = true;
+    $("#progressText").text("已中斷");
+    $("#modalCancelBtn").show();
+    $("#modalStopBtn").hide();
+    $("#modalDoneBtn").prop("disabled", false);
+  });
 
   // . 啟用區段動畫
   // $("#keypoint-content .warning-text-Estimate").on("click", function () {
@@ -318,15 +328,6 @@ async function captureSlide(mode = "clipboard") {
         $("#modalStopBtn").show();
         $("#modalDoneBtn").prop("disabled", true);
 
-        // 中斷按鈕
-        $("#modalStopBtn").off("click").on("click", () => {
-          cancelProgress = true;
-          $("#progressText").text("已中斷");
-          $("#modalCancelBtn").show();
-          $("#modalStopBtn").hide();
-          $("#modalDoneBtn").prop("disabled", false);
-        });
-
         // 1. 底圖層（baseLayer）：複製 svg 並移除 warning 標記圖層
         let $svgClone = $("#basemap").clone();
         // $svgClone.find("g#warning_range, foreignObject").remove();  // 移除  warning_range 、foreignObject
@@ -346,7 +347,7 @@ async function captureSlide(mode = "clipboard") {
           scale: scaleFactor,
           useCORS: true,
           removeContainer: true,         // 清除臨時容器節省記憶體
-          logging: false,                // 關閉 log
+          logging: false                 // 關閉 log
         });
         
         // ✅ Debug: 輸出 baseCanvas base64 圖像
@@ -369,26 +370,27 @@ async function captureSlide(mode = "clipboard") {
         $("body").append($animDiv);
         
         // 3. 標題層（topLayer），擷取 silde（HTML文字區）
-        $svgClone = $("#basemap").clone();
+        // $svgClone = $("#basemap").clone();
         // $slideClone.find("g#warning_range, foreignObject").remove();  // 移除  warning_range 、foreignObject
-        $svgClone.find(">g").remove();  // 只留下foreignObject
-        $svgClone.find("foreignObject").append($("#slide").clone())
+        // $svgClone.find(">g").remove();  // 只留下foreignObject
+        // $svgClone.find("foreignObject").append($("#slide").clone())
 
-        const $topDiv = $("<div id='topDiv'>").css({
-          position: "absolute",
-          top: "-9999px",
-          width: $svgObj.width(),
-          height: $svgObj.height()
-        }).append($svgClone);
+        // const $topDiv = $("<div id='topDiv'>").css({
+          // position: "absolute",
+          // top: "-9999px",
+          // width: $svgObj.width(),
+          // height: $svgObj.height()
+        // }).append($svgClone);
 
-        $("body").append($topDiv);
+        // $("body").append($topDiv);
 
-        const topCanvas = await html2canvas(document.querySelector("#topDiv"), {
+        // const topCanvas = await html2canvas(document.querySelector("#topDiv"), {
+        const topCanvas = await html2canvas($("#slide")[0], {
           backgroundColor: null,
           scale: scaleFactor,
           useCORS: true,
           removeContainer: true,         // 清除臨時容器節省記憶體
-          logging: false,                // 關閉 log
+          logging: false                 // 關閉 log
         });
         
         
@@ -426,7 +428,7 @@ async function captureSlide(mode = "clipboard") {
             scale: scaleFactor,
             useCORS: true,
             removeContainer: true,         // 清除臨時容器節省記憶體
-            logging: false,                // 關閉 log
+            logging: false                 // 關閉 log
           });
           
           // ✅ Debug: 輸出 animCanvas base64 圖像
