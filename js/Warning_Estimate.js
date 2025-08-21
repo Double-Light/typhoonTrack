@@ -957,10 +957,11 @@ setWarningMarksSize = function(fontSize = 9, markName = "") {
       [-1, -0.5] // 右
     ];
     
+    // 建立描述文字字串 (用於決定 label寬度與高度)
     let tspans = $("g#warning_marks g[name='warning_center_contact'] text tspan").map((_,el)=>$(el).text()).get()
     let textMaxLen = Math.max(...tspans.map(t=>[...t].reduce((len,ch)=>len+(/[\u0000-\u00ff]/.test(ch)?0.5:1),0)));
 
-    console.log("最大加權字數：", textMaxLen);
+    // console.log("最大加權字數：", textMaxLen);
     const lines = $(this).find("text").find("tspan").length;
 
     // 計算寬高

@@ -387,7 +387,6 @@ async function captureSlide(mode = "clipboard") {
           logging: false                 // 關閉 log
         });
         
-        
         // 4. 逐幀截圖動畫層（animLayer），並合併三層到一個 canvas
         const totalDuration = (aniParas.dur-aniParas.pauseSec) || 12; // 動畫總秒數
         const fps = 8;
@@ -546,7 +545,7 @@ function setEditModel() {
     if ($("#btn_animsEnable").prop("checked")){
       $("#btn_animsEnable").prop("checked",false) // 關閉動畫
       setTcAnimate()
-      // toggleAnimEnable()
+      toggleAnimEnable()
     }
   } else {       // 拖曳/縮放模式
     /* ===== 離開編輯模式 ===== */
@@ -595,8 +594,7 @@ function enableTextEdit(enable = true) {
     editableSelectors = [
       "#slide-title p",
       "#slide-description-table td[name]",
-      "#slide-production>div",
-      "#keypoint-content .warning-text span:nth-of-type(4)"
+      "#slide-production>div"
     ];
   }
 
@@ -1121,7 +1119,8 @@ function toggleAnimEnable() {
     svg.unpauseAnimations();
 
     $("#btn_animsPlayPause").show().prop("disabled", false).attr("type", "animsPlay");
-    $("#btn_download_gif").prop("disabled", false).css("fill", "")     // 恢復GIF下載
+    $("#btn_screenshot, #btn_download_png").prop("disabled", true)  // 暫停截圖、PNG下載
+    $("#btn_download_gif").prop("disabled", false)                  // 恢復GIF下載
     $("#btn-back-point, #btn-next-point").hide();
   } else {
     // 停用動畫
@@ -1129,7 +1128,8 @@ function toggleAnimEnable() {
     svg.pauseAnimations();
 
     $("#btn_animsPlayPause").hide().prop("disabled", true).attr("type", "animsPause");
-    $("#btn_download_gif").prop("disabled", true).css("fill", "grey")  // 暫停GIF下載
+    $("#btn_screenshot, #btn_download_png").prop("disabled", false) // 恢復截圖、PNG下載
+    $("#btn_download_gif").prop("disabled", true)                   // 暫停GIF下載
     $("#btn-back-point, #btn-next-point").show();
   }
   
