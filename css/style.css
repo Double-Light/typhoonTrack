@@ -136,7 +136,8 @@ select {
 
 .editMode #slide[ppt_theme_type="Full_Map_1"] #slide-title,
 .editMode #slide[ppt_theme_type="Full_Map_1"] #slide-description,
-.editMode #slide[ppt_theme_type="Full_Map_1"] #slide-production>div {
+.editMode #slide[ppt_theme_type="Full_Map_1"] #slide-production>div,
+.editMode #slide[ppt_theme_type="Full_Map_1"] #keypoint-content .warning-text span:nth-of-type(4) {
   cursor: pointer;
 }
 
@@ -211,6 +212,11 @@ select {
   border: none;
   cursor: pointer;
   padding: 0;
+}
+
+#editor-panel button:disabled {
+  pointer-events: none;
+  fill: #e0e0e0;
 }
 
 /* 全螢幕按鈕 */
