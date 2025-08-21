@@ -476,13 +476,13 @@ async function captureSlide(mode = "clipboard") {
           
           $baseDiv.remove();
           $animDiv.remove();
-          $topDiv.remove();
+          // $topDiv.remove();
 
           gif.render();
         } else {
           $baseDiv.remove();
           $animDiv.remove();
-          $topDiv.remove();
+          // $topDiv.remove();
         }
       }
     }
