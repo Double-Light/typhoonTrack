@@ -383,9 +383,19 @@ async function captureSlide(mode = "clipboard") {
         // }).append($svgClone);
 
         // $("body").append($topDiv);
+        
+        $slideClone = $("#slide").clone();
+        const $topDiv = $("<div id='topDiv'>").css({
+          position: "absolute",
+          top: "-9999px",
+          width: $svgObj.width(),
+          height: $svgObj.height()
+        }).append($slideClone);
 
-        // const topCanvas = await html2canvas(document.querySelector("#topDiv"), {
-        const topCanvas = await html2canvas($("#slide")[0], {
+        $("body").append($topDiv);
+        
+        const topCanvas = await html2canvas(document.querySelector("#topDiv"), {
+        // const topCanvas = await html2canvas($("#slide")[0], {
           backgroundColor: null,
           scale: scaleFactor,
           useCORS: true,
@@ -476,13 +486,13 @@ async function captureSlide(mode = "clipboard") {
           
           $baseDiv.remove();
           $animDiv.remove();
-          // $topDiv.remove();
+          $topDiv.remove();
 
           gif.render();
         } else {
           $baseDiv.remove();
           $animDiv.remove();
-          // $topDiv.remove();
+          $topDiv.remove();
         }
       }
     }
