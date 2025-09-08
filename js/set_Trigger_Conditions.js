@@ -192,10 +192,18 @@ setTriggerConditions = function() {
   });
 
   // 7. 下載功能
-  $("#slide_production").on("click", () => captureSlide("pdf"));
+  // 點擊 #slide_production 時，打開 Modal 並顯示選項
+  $("#slide_production").on("click", function() {
+    $("#Modal").show();          // 顯示 Modal
+    $("#productContent").show(); // 顯示選項
+    $("#progressContent").hide();// 隱藏進度條
+    $("#modalStopBtn").hide();   // 隱藏中斷按鈕
+  });
+
+  // $("#slide_production").on("click", () => captureSlide("pdf"));
   $("#btn_screenshot").on("click", () => captureSlide("clipboard"));
-  $("#btn_download_png").on("click", () => captureSlide("png"));
-  $("#btn_download_gif").on("click", () => captureSlide("gif"));
+  $("#btn_download_png").on("click", () => captureSlide("png-capture"));
+  $("#btn_download_gif").on("click", () => captureSlide("gif-capture"));
   $("#btn_download_svg").on("click", () => captureSlide("svg"));
   
   // 8. Modal
@@ -217,280 +225,473 @@ setTriggerConditions = function() {
 };
 
 // 下載功能
-async function captureSlide(mode = "clipboard") {
-  console.log("執行截圖模式：", mode);
-  const tStart = performance.now();  // 記錄開始時間
+// === 全域設定 ===
+let segments = []
 
-  $("#editor-panel").hide();
+async function captureSlide(mode = "clipboard") {
+  console.log("執行下載模式：", mode);
+  const tStart = performance.now();
+  
+  cancelProgress = false;
+  
+  $("#editor-panel").hide();   // 隱藏編輯面板
+  $("#productContent").hide(); // 隱藏選項
+  $("#progressContent").show();// 顯示進度條
+
+  const $svgObj = $("#svgObj");
+  if ($svgObj.length === 0) {
+    alert("未找到 #svgObj，無法截圖！");
+    return;
+  }
+
+  const scaleFactor = $svgObj.hasClass("fullscreen") ? 2.666667 : 2.666667;
+  const fileName = `${$("#slide-title").html()}路徑預測示意圖_${moment($("select#trackFcstList option:selected").val()).format("DD日HH時")}`
+  
+  // 分段設定 segments
+  if (mode.includes("gif")){  // GIF ==> segments = [[s1,e1],[s2,e2]...]
+    const [tauStart, tauEnd] = [xPData[0].tau, xPData[xPData.length-1].tau]            // 預報起訖時段
+    const spiltTau = warning_data.filter(item => item.tau > 0).map(item => item.tau);  // 分段時間點
+    if (mode.includes("split")) {  // 回傳分段時間點
+      segments = [[tauStart, spiltTau[0]], ...spiltTau.map((t, i) => i < spiltTau.length - 1 ? [t, spiltTau[i + 1]] : null).filter(Boolean), [spiltTau.at(-1), tauEnd]];
+    } else {  // 回傳起訖預報時段
+      segments = [[tauStart, tauEnd]];
+    }
+  } else { // 非GIF ==> segments = [tau1,tau2...]
+    // 為"clipboard" 或 "png-capture" ==> 擷取時間軸當下畫面
+    if (mode === "clipboard" || mode === "png-capture"){
+      if ($("#btn_animsEnable").prop("checked")){   // 動畫啟動
+        segments = [Math.min(aniParas.tauRange[0] + (svg.getCurrentTime()/aniParas.dur)%1*(aniParas.tauRange[1]+aniParas.pauseSec*perHr-aniParas.tauRange[0]),aniParas.tauRange[1])] // 動畫模式當下時間點
+      } else {
+        segments = [parseInt($svgObj.find("#tc_circle").attr("tau")) || 0]  // 靜態模式時間點
+      }
+    } else if (mode.includes("split")) {  // 回傳分段時間點
+      segments = warning_data.filter(item => item.tau>=0).map(item => item.tau)
+      if (segments[0] > 0) { segments = [0, ...segments]} // 起始設為0
+    } else {
+      segments = [0]
+    }
+  }
+  console.log(segments);
 
   try {
+    // Type1: SVG
     if (mode === "svg") {
-      // ✅ 1. 匯出 SVG（包含 foreignObject）
-      const svgEl = document.querySelector("svg#basemap");
-      const clonedSvg = svgEl.cloneNode(true);
-      // optional: 將不必要的元素隱藏/刪除
+      exportAsSvg();
 
-      const serializer = new XMLSerializer();
-      const svgStr = serializer.serializeToString(clonedSvg);
-      const svgBlob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
+    // Type2: 靜態形式 (PNG or PDF)
+    } else if (["clipboard", "png-capture", "png", "png-split", "pdf", "pdf-split"].includes(mode)) {
+      // step1: 建立 canvasDiv 與分段設定
+      let $svgClone = $("#basemap").clone();  // 複製
+      $svgClone.find("foreignObject, animate").remove();  // 移除 foreignObject 與 animate
 
-      const link = document.createElement("a");
-      link.download = "screenshot.svg";
-      link.href = URL.createObjectURL(svgBlob);
-      link.click();
-      URL.revokeObjectURL(link.href);
-    } else {  // html2canvas 截圖
-      const $svgObj = $("#svgObj");
-      const scaleFactor = $svgObj.hasClass('fullscreen') ? 2.666667 : 1 ;  // 畫質放大
-    
-      // 暫時移出 foreignObject，否則 html2canvas 會無法正確截圖
-      const $foreignObj = $("svg#basemap foreignObject");
-      const $slideDiv = $foreignObj.find("#slide");
-      const $originalSlide = $slideDiv.detach();
-      $svgObj.append($originalSlide); 
+      const $canvasDiv = $("<div id='canvasDiv'>").css({
+        display: "flex",
+        position: "absolute",
+        top: "-9999px",
+        width: $svgObj.width(),
+        height: $svgObj.height()
+      }).append($svgClone).append($("#slide").clone()); // 將 foreignObject 內的 div#slide加入
+
+      $("body").append($canvasDiv);
       
-      // if ($slideDiv.length === 0) {
-        // alert("未找到 foreignObject 中的 #slide");
-        // return;
-      // }
+      // step2: 根據 segments 建立 myImages 陣列 (convas)
+      let myImages = [];
+      for (let thisTau of segments) {
+        if (cancelProgress) break;
+        if ($("#btn_animsEnable").prop("checked")===false && (mode === "clipboard" || mode === "png-capture")){
+          // 靜態模式擷取當下畫面不用執行 setTcCircle
+        } else { // 更新畫面 setTcCircle
+          await setTcCircle(thisTau, $("#canvasDiv>svg"), thisTau === 0 ? true : false, thisTau === 0 ? false : true);
+          await new Promise(requestAnimationFrame); // 不等畫面顯示
+        }
+        const baseCanvas = await makeCanvas($("#canvasDiv")[0], 2.666667);
+        myImages.push({tau: thisTau, dataUrl: baseCanvas.toDataURL("image/png")});
+      }
       
-      // ✅ 2. 使用 html2canvas 擷取 foreignObject 可見畫面
-      if (mode != "gif") {
-        const canvas = await html2canvas($svgObj[0], {
-          backgroundColor: null,
-          scale: 2.666667,
-          useCORS: true,
-          removeContainer: true,
-          logging: false,
-        });
-
-        if (mode === "clipboard") {
-          canvas.toBlob(async (blob) => {
-            try {
-              await navigator.clipboard.write([
-                new ClipboardItem({ "image/png": blob })
-              ]);
-              alert("已複製畫面到剪貼簿！");
-            } catch (err) {
-              console.error("複製失敗：", err);
-              alert("複製失敗，請確認瀏覽器支援剪貼簿API。");
-            }
-          }, "image/png");
-        }
-
-        if (mode === "png") {
-          canvas.toBlob((blob) => {
-            const link = document.createElement("a");
-            link.download = "screenshot.png";
-            link.href = URL.createObjectURL(blob);
-            link.click();
-          }, "image/png");
-        }
-
-        if (mode === "pdf") {
-          const { jsPDF } = window.jspdf;
-
-          // canvas 轉 base64 圖片
-          const imgData = canvas.toDataURL("image/jpeg", 1.0);
-
-          // canvas 寬高（px）
-          const widthPx = canvas.width;
-          const heightPx = canvas.height;
-
-          // 換算成 mm
-          const dpi = 96;
-          const widthMm = widthPx * 25.4 / dpi;
-          const heightMm = heightPx * 25.4 / dpi;
-
-          // 判斷橫直式
-          const orientation = widthMm > heightMm ? "landscape" : "portrait";
-
-          // 建立 PDF
-          const pdf = new jsPDF({
-            orientation,
-            unit: "mm",
-            format: [widthMm, heightMm]
+      // step3: 輸出檔案
+      if (mode === "clipboard") {
+        // 只擷取第一張
+        const blob = dataURLToBlob(myImages[0].dataUrl);
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        alert("已複製畫面到剪貼簿！");
+      } else if (mode.includes("png")) {
+        if (myImages.length === 1) {
+          const link = document.createElement("a");
+          link.download = `${fileName}.png`;
+          link.href = myImages[0].dataUrl;
+          link.click();
+        } else {
+          // 多個 PNG → 壓縮成 zip
+          const zip = new JSZip();
+          myImages.forEach((c, i) => {
+            zip.file(`${fileName}_${c.tau}.png`, c.dataUrl.split(",")[1], { base64: true });
           });
-
-          // 放圖片到 PDF
-          pdf.addImage(imgData, "JPEG", 0, 0, widthMm, heightMm);
-
-          // 下載
-          pdf.save("screenshot.pdf");
+          const content = await zip.generateAsync({ type: "blob" });
+          saveAs(content, `${fileName}.zip`);
         }
+      } else if (mode.includes("pdf")) {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF("landscape", "pt", [$svgObj.width(), $svgObj.height()]);
+        for (let i = 0; i < myImages.length; i++) {
+          if (cancelProgress) break;
+          if (i > 0) pdf.addPage();
+          pdf.addImage(myImages[i].dataUrl, "PNG", 0, 0, $svgObj.width(), $svgObj.height());
+        }
+        pdf.save(`${fileName}.pdf`);
+      } 
+      
+    
+    // Type3: GIF動畫形式 或 PPT投影片 => (分成三個圖層)
+    } else if (["gif", "gif-split", "gif-capture", "ppt", "ppt-split", "ppt-gif", "ppt-gif-split"].includes(mode)) {
+      // await renderGif(mode, scaleFactor, segments);
+    
+      $("#Modal").show();
+      $("#progressText").text("正在處理圖層...");
+      $("#progressBar").css("width", "0%");
+      $("#modalCancelBtn").hide();
+      $("#modalStopBtn").show();
+      $("#modalDoneBtn").prop("disabled", true);
+      
+      // step1: 將截圖區分為三層：底圖層（baseLayer）、動畫層（animLayer）、 標題層（topLayer）##
+      // 1. 底圖層（baseLayer）：為SVG內不變動的部分。複製 svg 並移除變動部分、foreignObject與animate
+      let $svgClone = $("#basemap").clone();
+      $svgClone.find("g#warning_marks .mark-fcst, g#tc_circle, foreignObject, animate").remove();  // 移除  warning_marks .mark-fcst 與  #tc_circle 、foreignObject
 
-      } else if (mode === "gif") {
-        let cancelProgress = false;
-        $("#Modal").show();
-        $("#progressText").text("正在處理...");
-        $("#progressBar").css("width", "0%");
-        $("#modalCancelBtn").hide();
-        $("#modalStopBtn").show();
-        $("#modalDoneBtn").prop("disabled", true);
+      const $baseDiv = $("<div id='baseDiv'>").css({
+        position: "absolute",
+        top: "-9999px",
+        width: $svgObj.width(),
+        height: $svgObj.height()
+      }).append($svgClone);
 
-        // 1. 底圖層（baseLayer）：複製 svg 並移除 warning 標記圖層
-        let $svgClone = $("#basemap").clone();
-        $svgClone.find("g#warning_marks .mark-fcst, g#tc_circle, foreignObject, animate").remove();  // 移除  warning_marks .mark-fcst 與  #tc_circle 、foreignObject
+      $("body").append($baseDiv);
+      
+      const baseCanvas = await makeCanvas($("#baseDiv")[0], scaleFactor)
+      
+      // ✅ Debug: 輸出 baseCanvas base64 圖像
+      // console.log(`baseCanvas:`, baseCanvas.toDataURL());
+      
+      $("#svgObj g#warning_range").show()
+      
+      // 2. 動畫層（animLayer）：僅保留SVG內會變動的部分
+      $svgClone = $("#basemap").clone();
+      $svgClone.find("defs style, defs>g:not(#tyIcon_past,#tyIcon_fcst), >g:not(#warning_range), g#warning_circle,g#warning_marks .mark-past, foreignObject, animate").remove() // 只留下 #warning_marks .mark-fcst 與  #tc_circle
+      
+      const $animDiv = $("<div id='animDiv'>").css({
+        position: "absolute",
+        top: "-9999px",
+        width: $svgObj.width(),
+        height: $svgObj.height()
+      }).append($svgClone);  
 
-        const $baseDiv = $("<div id='baseDiv'>").css({
-          position: "absolute",
-          top: "-9999px",
-          width: $svgObj.width(),
-          height: $svgObj.height()
-        }).append($svgClone);
+      $("body").append($animDiv);
+      
+      // 3. 標題層（topLayer），擷取 SVG foreignObject 內的 #silde（HTML文字區）
+      const $topDiv = $("<div id='topDiv'>").css({
+        position: "absolute",
+        top: "-9999px",
+        width: $svgObj.width(),
+        height: $svgObj.height()
+      }).append($("#slide").clone());
 
-        $("body").append($baseDiv);
-        
-        const baseCanvas = await html2canvas(document.querySelector("#baseDiv"), {
-          backgroundColor: null,
-          scale: scaleFactor,
-          useCORS: true,
-          removeContainer: true,         // 清除臨時容器節省記憶體
-          logging: false                 // 關閉 log
-        });
-        
-        // ✅ Debug: 輸出 baseCanvas base64 圖像
-        // console.log(`baseCanvas:`, baseCanvas.toDataURL());
-        
-        $("#svgObj g#warning_range").show()
-        
-        // 2. 動畫層（animLayer）
-        $svgClone = $("#basemap").clone();
-        $svgClone.find("defs style, defs>g:not(#tyIcon_past,#tyIcon_fcst), >g:not(#warning_range), g#warning_circle,g#warning_marks .mark-past, foreignObject, animate").remove() // 只留下 #warning_marks .mark-fcst 與  #tc_circle
-        
-        const $animDiv = $("<div id='animDiv'>").css({
-          position: "absolute",
-          top: "-9999px",
-          width: $svgObj.width(),
-          height: $svgObj.height()
-        }).append($svgClone);  
+      $("body").append($topDiv);
+      
+      const topCanvas = await makeCanvas($("#topDiv")[0], scaleFactor)
+      
+      // step2: 建立 myImages 陣列    逐幀處理動畫層（animLayer），並合併三層到一個 canvas
+      let myImages = [];   // myImages
+      
+      // 2.1 GIF ==> 收集所有 frame → 存入 canvasList ，再建立 GIF myImages
+      if (mode.includes("gif")) {
+        let canvasList = [];   // canvasList
 
-        $("body").append($animDiv);
-        
-        // 3. 標題層（topLayer），擷取 silde（HTML文字區）
-        
-        const $topDiv = $("<div id='topDiv'>").css({
-          position: "absolute",
-          top: "-9999px",
-          width: $svgObj.width(),
-          height: $svgObj.height()
-        }).append($("#slide").clone());
-
-        $("body").append($topDiv);
-        
-        const topCanvas = await html2canvas(document.querySelector("#topDiv"), {
-        // const topCanvas = await html2canvas($("#slide")[0], {
-          backgroundColor: null,
-          scale: scaleFactor,
-          useCORS: true,
-          removeContainer: true,         // 清除臨時容器節省記憶體
-          logging: false                 // 關閉 log
-        });
-        
-        // 4. 逐幀截圖動畫層（animLayer），並合併三層到一個 canvas
-        const totalDuration = (aniParas.dur-aniParas.pauseSec) || 12; // 動畫總秒數
+        const totalDuration = (mode === "gif-capture" ? (aniParas.dur - pauseSec) : (xPData[xPData.length-1].tau - xPData[0].tau))/perHr || 12; // 動畫總秒數
         const fps = 8;
         const totalFrames = totalDuration * fps;
+        
+        console.log("totalFrames:",totalFrames)
 
-        const gif = new GIF({
-          workers: 2,
-          quality: 1,    // 數值越小畫質越高
-          width: baseCanvas.width,
-          height: baseCanvas.height,
-          workerScript: "./js/gif.worker.js" // 確保本地可訪問
-        });
-        
-        let frameTau = []
-        
         for (let frame = 0; frame <= totalFrames; frame++) {
           if (cancelProgress) break;
-          // const tau = parseInt((frame * perHr / fps));
 
-          const tau = parseInt((frame * perHr / fps) + aniParas.tau[0])  //  tauTime 精確控制小數點一位
+          const thisTau = parseInt((frame * perHr / fps) + (mode === "gif-capture" ? aniParas.tau[0] : xPData[0].tau));
 
-          frameTau.push(tau);
-          // console.log(tau)
+          // 更新暴風圈圖層
+          await setTcCircle(thisTau, $("#animDiv>svg"));
+          await new Promise(requestAnimationFrame);
+
+          // 擷取 anim 層
+          const animCanvas = await makeCanvas($("#animDiv")[0], scaleFactor)
           
-          // 呼叫控制暴風圈的函式
-          await setTcCircle(tau,$("#animDiv>svg"));
-          await new Promise(requestAnimationFrame); // 不等畫面顯示
+          if (mode.includes("ppt")) {
+            canvasList.push({ tau: thisTau, canvas: animCanvas });
+          } else {
+            // 合併三層
+            const mergedCanvas = document.createElement("canvas");
+            mergedCanvas.width = baseCanvas.width;
+            mergedCanvas.height = baseCanvas.height;
+            const ctx = mergedCanvas.getContext("2d");
+            ctx.drawImage(baseCanvas, 0, 0);
+            ctx.drawImage(animCanvas, 0, 0);
+            ctx.drawImage(topCanvas, 0, 0);
 
-          // 立即擷取畫面，不等待
-          const animCanvas = await html2canvas(document.querySelector("#animDiv"), {
-            backgroundColor: null,
-            scale: scaleFactor,
-            useCORS: true,
-            removeContainer: true,         // 清除臨時容器節省記憶體
-            logging: false                 // 關閉 log
-          });
-          
-          // ✅ Debug: 輸出 animCanvas base64 圖像
-          // console.log(`Frame ${frame} animCanvas:`, animCanvas.toDataURL());
-          // console.log(baseCanvas.width,animCanvas.width);
-          
-          // 🔧 合併三層到一個 canvas
-          const mergedCanvas = document.createElement("canvas");
-          mergedCanvas.width = baseCanvas.width;
-          mergedCanvas.height = baseCanvas.height;
-          const ctx = mergedCanvas.getContext("2d");
-
-          // 將各圖層放大後合成
-          ctx.drawImage(baseCanvas, 0, 0);
-          ctx.drawImage(animCanvas, 0, 0);
-          ctx.drawImage(topCanvas, 0, 0);
-
-          gif.addFrame(mergedCanvas, { delay: (frame + 1 > totalFrames && aniParas.pauseSec > 0) ? 1000 * aniParas.pauseSec :1000 / fps });
-          
-          // ⏳ 更新進度條
-          const percent = Math.round((frame / totalFrames) * 100);
-          console.log(tau,frame,totalFrames,percent)
-          $("#progressBar").css("width", `${percent}%`);
+            // 先存起來，不立即加到 gif
+            canvasList.push({ tau: thisTau, canvas: mergedCanvas });
+            
+            // ⏳ 更新進度條
+            const percent = Math.round((frame / totalFrames/3) * 100);
+            // console.log(thisTau,frame,totalFrames,percent)
+            $("#progressText").text("正在處理影格圖片...");
+            $("#progressBar").css("width", `${percent}%`);
+          }
         }
         
-        console.log("frameTau:" ,frameTau);
-        
-        if (!cancelProgress) {
-          gif.on("finished", function (blob) {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `typhoon_animation_${Date.now()}.gif`;
-            link.click();
-            
-            // 計算費時
-            const tEnd = performance.now();
-            const seconds = ((tEnd - tStart) / 1000).toFixed(1);
-            $("#progressBar").css("width", "100%");
-            $("#progressText").text(`下載完成，用時 ${seconds} 秒`);
-            $("#modalCancelBtn").show();
-            $("#modalStopBtn").hide();
-            $("#modalDoneBtn").prop("disabled", false);
-          });
-          
-          $baseDiv.remove();
-          $animDiv.remove();
-          $topDiv.remove();
+        // 使用：segments = [[tauStart1, tauEnd1], [tauStart2, tauEnd2], ...]
+        const myImages = await buildGifsBySegments(canvasList, segments, fps, pauseSec);
 
-          gif.render();
-        } else {
-          $baseDiv.remove();
-          $animDiv.remove();
-          $topDiv.remove();
+        // myImages = [{segment:0, blob:GIFBlob}, {segment:1, blob:GIFBlob}, ...]
+        // 可以用 saveAs(myImages[i].blob, `segment_${i}.gif`);
+        
+      // 2.2 PPT非GIF ==> 依照 segments 建立 myImages
+      } else if (mode.startsWith("ppt-")) { 
+        for (let thisTau of segments) {
+          if (cancelProgress) break;
+          if ($("#btn_animsEnable").prop("checked")===false && (mode === "clipboard" || mode === "png-capture")){
+            // 靜態模式擷取當下畫面不用執行 setTcCircle
+          } else { // 更新畫面 setTcCircle
+            await setTcCircle(thisTau, $("#animDiv>svg"), thisTau === 0 ? true : false, thisTau === 0 ? false : true);
+            await new Promise(requestAnimationFrame); // 不等畫面顯示
+          }
+          const animCanvas = await makeCanvas($("#animDiv")[0], 2.666667)
+          myImages.push({ tau: thisTau, dataUrl: animCanvas.toDataURL("image/png")});
         }
       }
+
+      // step3: 輸出檔案
+      if (mode === "gif") {  
+        // 單一 GIF → 直接下載
+        if (myImages.length > 0) {
+          const url = myImages[0].dataUrl;
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${fileName}.gif`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      } else if (mode === "gif-split") {
+        // 多個 GIF → zip 壓縮
+        const zip = new JSZip();
+        myImages.forEach((img, i) => {
+          zip.file(`${fileName}_${img.segment.join("-")}.gif`, img.blob);
+        });
+        const content = await zip.generateAsync({ type: "blob" });
+        const url = URL.createObjectURL(content);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${fileName}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else if (mode.startsWith("ppt-")) {  // 輸出檔案類型為 PPT
+        // slide 寬高 換算成英吋
+        const widthIn = 720 / 72;
+        const heightIn = 405 / 72;
+
+        const pptx = new PptxGenJS();
+        pptx.defineLayout({ name: "custom", width: widthIn, height: heightIn });
+        pptx.layout = "custom";
+        
+        const baseImgData = baseCanvas.toDataURL("image/png");
+        const topImgData = topCanvas.toDataURL("image/png");
+        
+        for (let c of myImages) {
+          if (cancelProgress) break;
+          let slide = pptx.addSlide();
+          slide.addImage({ data: baseImgData, x: 0, y: 0, w: widthIn, h: heightIn });
+          slide.addImage({ data: c.dataUrl,   x: 0, y: 0, w: widthIn, h: heightIn });
+          slide.addImage({ data: topImgData,  x: 0, y: 0, w: widthIn, h: heightIn });
+        }
+        await pptx.writeFile({ fileName: `${fileName}.pptx` });
+        // console.log("PPT下載完成")
+      }
     }
+
   } catch (err) {
     console.error("截圖錯誤：", err);
     alert("截圖發生錯誤！");
   } finally {
-    // ✅ 還原原始 foreignObject 結構
-    if (typeof $originalSlide == 'object') {$foreignObj.append($originalSlide)};
-    if ($("svg#basemap foreignObject").find("#slide").length === 0) {
-      $("svg#basemap foreignObject").append($("#slide"))
-    }
+    ["#baseDiv", "#animDiv", "#topDiv", "#canvasDiv"].forEach(sel => $(sel).remove());
     $("#editor-panel").show();
   }
 }
+
+// === 工具函式 ===
+// 匯出 SVG（包含 foreignObject）
+function exportAsSvg(fileName = "screenshot" ) {
+  
+  const svgEl = document.querySelector("svg#basemap");
+  const clonedSvg = svgEl.cloneNode(true);
+  // optional: 將不必要的元素隱藏/刪除
+
+  const serializer = new XMLSerializer();
+  const svgStr = serializer.serializeToString(clonedSvg);
+  const svgBlob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
+
+  const link = document.createElement("a");
+  link.download = `${fileName}.svg`;
+  link.href = URL.createObjectURL(svgBlob);
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+async function makeCanvas(canvasDiv,scaleFactor) {
+  const myCanvas = await html2canvas(canvasDiv, {
+    backgroundColor: null,
+    scale: scaleFactor,
+    useCORS: true,
+    removeContainer: true,         // 清除臨時容器節省記憶體
+    logging: false                 // 關閉 log
+  });
+  
+  return myCanvas;
+}
+
+// 依照 segments 分段輸出 GIF
+// GIF → 轉 blob → dataUrl
+async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
+  const gifs = [];
+
+  for (let i = 0; i < segments.length; i++) {
+    const [startTau, endTau] = segments[i];
+    const gif = new GIF({
+      workers: 2,
+      quality: 1,
+      // width: baseCanvas.width,
+      // height: baseCanvas.height,
+      width: canvasList[0].canvas.width,
+      height: canvasList[0].canvas.height,
+      workerScript: "./js/gif.worker.js"
+    });
+
+    canvasList.forEach((frame, idx) => {
+      if (frame.tau >= startTau && frame.tau <= endTau) {
+        gif.addFrame(frame.canvas, {
+          delay: (idx + 1 === canvasList.length && pauseSec > 0)
+            ? 1000 * pauseSec
+            : 1000 / fps
+        });
+      }
+    });
+
+    gifs.push(new Promise((resolve) => {
+      gif.on("finished", async (blob) => {
+        const dataUrl = await blobToDataUrl(blob);
+        resolve({ segment: segments[i], dataUrl });
+      });
+      gif.render();
+    }));
+  }
+
+  return Promise.all(gifs);
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+}
+
+function dataURLToBlob(dataUrl) {
+  const arr = dataUrl.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+}
+
+
+
+
+// === GIF 渲染（單段、多段、投影片）===
+async function renderGif(mode, scaleFactor, segments = []) {
+  const fps = 8;
+  const [tauStart, tauEnd] = aniParas.tauRange;
+
+  if (mode.startsWith("ppt-gif")) {
+    const pptx = new PptxGenJS();
+    pptx.defineLayout({ name: "custom", width: 10, height: 5.625 });
+    pptx.layout = "custom";
+
+    for (let [startTau, endTau] of segments) {
+      const gifBlob = await makeGif(startTau, endTau, fps, scaleFactor, true);
+      const topPng = await makeTopLayerPng(scaleFactor);
+
+      let slide = pptx.addSlide();
+      // 上層 PNG
+      slide.addImage({ data: topPng, x: 0, y: 0, w: 10, h: 5.625 });
+      // 中層 GIF
+      slide.addMedia({ type: "online", link: URL.createObjectURL(gifBlob), x: 0, y: 0, w: 10, h: 5.625 });
+      // 下層 PNG
+      slide.addImage({ data: topPng, x: 0, y: 0, w: 10, h: 5.625 });
+    }
+
+    return pptx.writeFile({ fileName: `typhoon_animation_${Date.now()}.pptx` });
+
+  } else {
+    let files = [];
+    for (let [startTau, endTau] of segments) {
+      const gifBlob = await makeGif(startTau, endTau, fps, scaleFactor, false);
+      files.push({ filename: `typhoon_${startTau}-${endTau}.gif`, blob: gifBlob });
+    }
+    return files.length === 1 ? files : await makeZip(files);
+  }
+}
+
+// === GIF 與圖層處理 ===
+async function makeGif(startTau, endTau, fps, scaleFactor, onlyAnimLayer) {
+  return new Promise(async (resolve) => {
+    const gif = new GIF({ workers: 2, quality: 1, workerScript: "./js/gif.worker.js" });
+    const frames = (endTau - startTau) * fps / perHr;
+    
+    console.log(frames,endTau, startTau, fps, perHr)
+
+    for (let f = 0; f <= frames; f++) {
+      const tau = parseInt(startTau + f * perHr / fps);
+      await setTcCircle(tau, $("#animDiv>svg"));
+      await new Promise(requestAnimationFrame);
+
+      const animCanvas = await html2canvas($("#animDiv")[0], {
+        backgroundColor: null, scale: scaleFactor, useCORS: true, removeContainer: true
+      });
+
+      gif.addFrame(animCanvas, { delay: 1000 / fps });
+    }
+
+    gif.on("finished", (blob) => resolve(blob));
+    gif.render();
+  });
+}
+
+async function makeTopLayerPng(scaleFactor) {
+  const topCanvas = await html2canvas($("#slide")[0], {
+    backgroundColor: null, scale: scaleFactor, useCORS: true, removeContainer: true
+  });
+  return topCanvas.toDataURL("image/png");
+}
+
+async function makeZip(files) {
+  const zip = new JSZip();
+  files.forEach(f => zip.file(f.filename, f.blob));
+  const blob = await zip.generateAsync({ type: "blob" });
+  downloadBlob(blob, `typhoon_${Date.now()}.zip`);
+  return [{ filename: `typhoon_${Date.now()}.zip`, blob }];
+}
+
 
 // ---------------------------------------------------------------------------------------------------------------
 
@@ -679,7 +880,7 @@ let currentTransform = { x: 0, y: 0 };
 
 // 啟用/停用mark移動功能
 function enableMarkDrag(enable = true) {
-  const svg = document.querySelector("svg#basemap");
+  // const svg = document.querySelector("svg#basemap");
   const $marks = $("#warning_marks g");
 
   let dragging = null;
@@ -971,6 +1172,7 @@ zoom = function(e) {
     x: e.clientX,
     y: e.clientY,
   };
+  // console.log("startClient:", startClient);
 
   // 2.2 轉換成 SVG 座標系統中的 SVG 座標點
   let newSVGPoint = svg.createSVGPoint();
@@ -992,6 +1194,7 @@ zoom = function(e) {
   // 3.2 進行縮放並檢查大小(長寬不可超過原始地圖大小)
   let oldWidth = parseInt($('#basemap').attr('width'), 10)
   let oldHeight = parseInt($('#basemap').attr('height'), 10)
+  // console.log(oldWidth,oldHeight);
 
   // 寬度較大 --> 高度易超出範圍(先調整高度)
   if (oldWidth / oldHeight > 1) {}
@@ -1024,7 +1227,6 @@ zoom = function(e) {
   svg.setAttribute('viewBox', `${startViewBox[0]} ${startViewBox[1]} ${newWidth} ${newHeight}`);
   fObj.style.transform = `translate(${startViewBox[0]}px, ${startViewBox[1]}px) scale(${newWidth/720})`
 
-
   // 4.2 將一開始鼠標的執行縮放位置的 viewPort Client 座標利用新的 CTM ，轉換出對應的 SVG 座標。
   CTM = svg.getScreenCTM();
   let moveToSVGPoint = newSVGPoint.matrixTransform(CTM.inverse());
@@ -1034,6 +1236,7 @@ zoom = function(e) {
     dx: startSVGPoint.x - moveToSVGPoint.x,
     dy: startSVGPoint.y - moveToSVGPoint.y,
   };
+  // console.log("delta:", delta);
 
   // 6.進行位移
   // 6.1 讀取中繼 viewBox (middleViewBox)
@@ -1041,13 +1244,17 @@ zoom = function(e) {
   .getAttribute('viewBox')
   .split(' ')
   .map((n) => parseFloat(n));
+  
+  // console.log("middleViewBox:", middleViewBox);
 
   // 6.2 新位置計算
   let newLeft = middleViewBox[0] + delta.dx;
   let newTop = middleViewBox[1] + delta.dy;
+  
+  let ppt_theme_type = $("select#ppt_theme_type option:selected").val() // 投影片樣式
 
   // 6.3 位置檢查 (超出邊框則改為靠邊對齊)
-  if (newLeft < 0) {
+  if (newLeft < 0 && ppt_theme_type != "Right_Map_1") {
     newLeft = 0;
     // console.log('靠左對齊');
   } else if (newLeft + middleViewBox[2] > Map_Size[0]) {
@@ -1066,7 +1273,6 @@ zoom = function(e) {
   let moveBackViewBox = `${newLeft} ${newTop} ${middleViewBox[2]} ${middleViewBox[3]}`;
   svg.setAttribute('viewBox', moveBackViewBox);
   fObj.style.transform = `translate(${newLeft}px, ${newTop}px) scale(${middleViewBox[2]/720})`
-
 
   // console.log('viewBox: ' + moveBackViewBox);
   // console.log(startViewBox, moveBackViewBox);
@@ -1100,11 +1306,13 @@ showViewBox = function() {
   // console.log(per_LonLat);
 
   currentViewBox = document.getElementById('showDomainRange')
+  
+  let ppt_theme_type = $("select#ppt_theme_type option:selected").val() // 投影片樣式
 
   // currentViewBox.textContent = `現在的 viewBox 範圍為：(${Domain_LTWH})`
   currentViewBox.setAttribute('per_LonLat', per_LonLat.toString().replaceAll(",", " "))
   currentViewBox.setAttribute('Domain_Range', Domain_Range.toString().replaceAll(",", " "))
-  currentViewBox.textContent = `經緯度範圍： ${parseFloat(Domain_Range[1][0]).toFixed(2)}N ~ ${parseFloat(Domain_Range[1][1]).toFixed(2)}N ; ${parseFloat(Domain_Range[0][0]).toFixed(2)}E ~ ${parseFloat(Domain_Range[0][1]).toFixed(2)}E`
+  currentViewBox.textContent = `經緯度範圍： ${parseFloat(Domain_Range[1][0]).toFixed(2)}N ~ ${parseFloat(Domain_Range[1][1]).toFixed(2)}N ; ${parseFloat(ppt_theme_type === "Right_Map_1" ? Domain_Range[0][0] + (Domain_Range[0][1]-Domain_Range[0][0])/2 : Domain_Range[0][0]).toFixed(2)}E ~ ${parseFloat(Domain_Range[0][1]).toFixed(2)}E`
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -1119,7 +1327,7 @@ function toggleAnimEnable() {
     svg.unpauseAnimations();
 
     $("#btn_animsPlayPause").show().prop("disabled", false).attr("type", "animsPlay");
-    $("#btn_screenshot, #btn_download_png").prop("disabled", true)  // 暫停截圖、PNG下載
+    // $("#btn_screenshot, #btn_download_png").prop("disabled", true)  // 暫停截圖、PNG下載
     $("#btn_download_gif").prop("disabled", false)                  // 恢復GIF下載
     $("#btn-back-point, #btn-next-point").hide();
   } else {
@@ -1128,7 +1336,7 @@ function toggleAnimEnable() {
     svg.pauseAnimations();
 
     $("#btn_animsPlayPause").hide().prop("disabled", true).attr("type", "animsPause");
-    $("#btn_screenshot, #btn_download_png").prop("disabled", false) // 恢復截圖、PNG下載
+    // $("#btn_screenshot, #btn_download_png").prop("disabled", false) // 恢復截圖、PNG下載
     $("#btn_download_gif").prop("disabled", true)                   // 暫停GIF下載
     $("#btn-back-point, #btn-next-point").show();
   }

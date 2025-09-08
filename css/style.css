@@ -626,5 +626,34 @@ select {
   border-color: #ffc107;
 }
 
+.btn-orange {
+  color: #000;
+  background-color: #ff9800;
+  border-color: #ff9800;
+}
+
+.btn-danger {
+  color: #fff;
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+.btn-success {
+  color: #fff;
+  background-color: #198754;
+  border-color: #198754;
+}
+
+#productContent .download-btn-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  vertical-align: middle;
+  margin: 4px 0;
+}
+
+#productContent .download-btn-title{
+  padding: 7px 0;
+}
 
 

@@ -2,7 +2,6 @@ const fontSize = 9;           // 預設字體大小
 const lineHeightScale = 1.2;  // 行高比例
 const markSpacing = 5;        // mark間距
 
-const pauseSec = 1;           // 每次動畫循環暫停秒數
 
 let LandArea = ["本島", "澎湖", "金門", "馬祖"] // 警報估計時間陸上區域限定
 
@@ -1000,38 +999,9 @@ setWarningMarksSize = function(fontSize = 9, markName = "") {
 
 // 建立動畫參數
 function getTcAniDatas (aniStartTau = 0,aniEndTau = xPData[xPData.length-1]['tau']) {
-  AD = [];  // 先清空陣列
-  
-  // console.log(aniStartTau,aniEndTau,endBegin);
-  
-  // 起始 dt=0
-/*   for (let i = 1; i < PData.length; i++) {
-    const Pre = PData[i - 1];
-    const This = PData[i];
+  let AD = [];  // 先清空陣列
 
-    // 僅在 aniStartTau 位於 Pre.tau 與 This.tau 之間時才處理
-    if (!(aniStartTau < This.tau && aniStartTau > Pre.tau)) continue;
-
-    const delta = (aniStartTau - Pre.tau) / (This.tau - Pre.tau);
-
-    const PreTime = moment(Pre.time);
-    const ThisTime = moment(This.time);
-    const interpolatedTime = PreTime.clone().add(delta * (ThisTime.diff(PreTime)), 'milliseconds');
-
-    AD.push({
-      type: "start",
-      time: interpolatedTime.format('DD日HH時mm分').replace("00分", ""),
-      tau: aniStartTau,
-      ax: roundTo(Pre.ax + (This.ax - Pre.ax) * delta, 2),
-      ay: roundTo(Pre.ay + (This.ay - Pre.ay) * delta, 2),
-      R15_x: roundTo(Pre.R15_x + (This.R15_x - Pre.R15_x) * delta, 3),
-      R15_y: roundTo(Pre.R15_y + (This.R15_y - Pre.R15_y) * delta, 3),
-      R25_x: roundTo(Pre.R25_x + (This.R25_x - Pre.R25_x) * delta, 3),
-      R25_y: roundTo(Pre.R25_y + (This.R25_y - Pre.R25_y) * delta, 3)
-    });
-    break;
-  } */
-
+  // 起始位置 "start"
   AD.push((() => {
     const p = getInterpolatePoint(aniStartTau, PData, ["time", "tau", "ax", "ay", "R15_x", "R15_y", "R25_x", "R25_y"]);
     const { time, ...rest } = p;
@@ -1072,7 +1042,6 @@ function getTcAniDatas (aniStartTau = 0,aniEndTau = xPData[xPData.length-1]['tau
   });
   
   return AD
-
   // console.log("AniDatas:", AD);
 }
 
@@ -1126,39 +1095,38 @@ function setTcAnimate (aniType="all") {
     // console.log(aniType,aniStartTau,aniEndTau);
     
     // 建立動畫參數 aniDatas、aniParas (全域變數)
-    aniDatas = getTcAniDatas (aniStartTau,aniEndTau) // 建立動畫參數 aniDatas
+    aniDatas = getTcAniDatas (aniStartTau,aniEndTau) // 建立動畫參數 aniDatas (不含結尾暫停)
     
-    // let AD = JSON.parse(JSON.stringify(aniDatas)) // 複製 aniDatas
-
+    let AD = JSON.parse(JSON.stringify(aniDatas)) // 複製 aniDatas
 
     // 新贈結尾暫停
     if (pauseSec > 0){
-      aniDatas.push(
-        Object.assign({}, aniDatas[aniDatas.length - 1], {
+      AD.push(
+        Object.assign({}, AD[AD.length - 1], {
           type: "end_stop",
-          tau: aniDatas[aniDatas.length - 1].tau,
+          tau: AD[AD.length - 1].tau,
           dt:pauseSec
         })
       );
     }
 
     aniParas = {
-      "time" : aniDatas.map(item => item.time),
-      "tau" : aniDatas.map(item => item.tau),
-      "ax" : aniDatas.map(item => item.ax),
-      "ay" : aniDatas.map(item => item.ay),
-      "R15_x" : aniDatas.map(item => item.R15_x),
-      "R15_y" : aniDatas.map(item => item.R15_y),
-      "R25_x" : aniDatas.map(item => item.R25_x),
-      "R25_y" : aniDatas.map(item => item.R25_y)
+      "time" : AD.map(item => item.time),
+      "tau" : AD.map(item => item.tau),
+      "ax" : AD.map(item => item.ax),
+      "ay" : AD.map(item => item.ay),
+      "R15_x" : AD.map(item => item.R15_x),
+      "R15_y" : AD.map(item => item.R15_y),
+      "R25_x" : AD.map(item => item.R25_x),
+      "R25_y" : AD.map(item => item.R25_y)
     }
     
-    // 總時間（不含第 0 點 dt = 0）
-    const dur = aniDatas.reduce((sum, item) => sum + item.dt, 0);
+    // 總時間（含結尾動畫暫停）
+    const dur = AD.reduce((sum, item) => sum + item.dt, 0);
 
     // 計算累積時間（keyTimes 累積）
     let cumulative = [];
-    aniDatas.reduce((acc, item) => {
+    AD.reduce((acc, item) => {
       const sum = acc + item.dt;
       cumulative.push(sum);
       return sum;
@@ -1167,7 +1135,9 @@ function setTcAnimate (aniType="all") {
     // 新增 keyTimes、dur、perHr參數
     aniParas.keyTimes = cumulative.map(x => (x / dur).toFixed(3));
     aniParas.dur = dur;
-    aniParas.pauseSec = pauseSec;
+    aniParas.pauseSec = pauseSec || 0;
+    aniParas.tauRange=[aniStartTau,aniEndTau];
+    aniParas.aniType = aniType;
     aniParas.perHr = perHr;
     
     // console.log("aniParas:", aniParas);
@@ -1331,9 +1301,11 @@ function setTcAnimate (aniType="all") {
 }
 
 // 繪製TcCircle
-function setTcCircle(tauTime=0 ,$svg=$("svg#basemap")) {
+function setTcCircle(tauTime=0 ,$svg=$("svg#basemap"), showAllMarks = false, highlight = false) {
   $svg.find("g#tc_circle").contents().remove();
   let xRadius = ""
+  
+  console.log(tauTime);
   
   const {time, ax, ay, R15_x, R15_y, R25_x, R25_y} = getInterpolatePoint(tauTime, PData,["time", "ax", "ay", "R15_x", "R15_y", "R25_x", "R25_y"])
   
@@ -1351,13 +1323,23 @@ function setTcCircle(tauTime=0 ,$svg=$("svg#basemap")) {
   $svg.find("g#tc_circle").html(xRadius)
   
   // 標記顯示/隱藏
-  $svg.find("#warning_marks .mark-fcst").hide()
-  $svg.find("#keypoint .warning-text").removeClass("active")
-  Warning_Data.forEach(item => {
-    if (item.tau <= tauTime && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
-      $svg.find(`#warning_marks g[name='${item.type}']`).show()
-    }
-  });
+  if (showAllMarks) { // 標記全顯示
+    $svg.find("#warning_marks g").show()
+  } else { // 只顯示 Warning tau < tauTime
+    $svg.find("#warning_marks .mark-fcst").hide()
+    $svg.parent().find("#keypoint .warning-text").removeClass("active")
+    Warning_Data.forEach(item => {
+      if (item.tau <= tauTime && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
+        $svg.find(`#warning_marks g[name='${item.type}']`).show()
+        if (item.tau === tauTime && highlight) {
+          $svg.parent().find(`#keypoint .warning-text[name='${item.type}']`).addClass("active")
+          // $svg.parent().find(`#keypoint .warning-text[name='${item.type}']`).css("background","#FFC9C9B3")
+          // console.log(item.type, "highlight")
+        }
+      }
+    });
+  }
+
 }
 
 

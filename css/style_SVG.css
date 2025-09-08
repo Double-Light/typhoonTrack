@@ -77,7 +77,7 @@
 #slide {
   width: 720px;
   height: 405px;
-  position: relative;
+  position: absolute;
 }
 
 #slide[ppt_theme_type=Full_Map_1] svg {
@@ -253,7 +253,8 @@
   height: 100%;
   background-color: #fff0f0;
   border-radius: 0 10px 10px 0;
-  border-left: #fff solid
+  border-left: #fff solid 2px;
+  margin: -1px;
 }
 
 #slide[ppt_theme_type=Full_Map_1] #keypoint-label {
