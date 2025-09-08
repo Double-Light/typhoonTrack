@@ -251,8 +251,10 @@ async function captureSlide(mode = "clipboard") {
   if (mode.includes("gif")){  // GIF ==> segments = [[s1,e1],[s2,e2]...]
     const [tauStart, tauEnd] = [xPData[0].tau, xPData[xPData.length-1].tau]            // 預報起訖時段
     const spiltTau = warning_data.filter(item => item.tau > 0).map(item => item.tau);  // 分段時間點
-    if (mode.includes("split")) {  // 回傳分段時間點
+    if (mode === "gif-split")) {  // 回傳分段時間點
       segments = [[tauStart, spiltTau[0]], ...spiltTau.map((t, i) => i < spiltTau.length - 1 ? [t, spiltTau[i + 1]] : null).filter(Boolean), [spiltTau.at(-1), tauEnd]];
+    } else if (mode === "gif-capture"){
+      segments = [Math.min(aniParas.tauRange[0] + (svg.getCurrentTime()/aniParas.dur)%1*(aniParas.tauRange[1]+aniParas.pauseSec*perHr-aniParas.tauRange[0]),aniParas.tauRange[1])] // 動畫模式當下時間點
     } else {  // 回傳起訖預報時段
       segments = [[tauStart, tauEnd]];
     }
