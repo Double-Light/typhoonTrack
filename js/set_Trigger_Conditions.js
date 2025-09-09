@@ -453,7 +453,11 @@ async function captureSlide(mode = "clipboard") {
         }
         
         // 使用：segments = [[tauStart1, tauEnd1], [tauStart2, tauEnd2], ...]
+        console.log("canvasList:",canvasList.length)
         const myImages = await buildGifsBySegments(canvasList, segments, fps, pauseSec);
+        
+        console.log("myImages.length:" myImages.length)
+        console.log(myImages[0].dataUrl)
 
         // myImages = [{segment:0, blob:GIFBlob}, {segment:1, blob:GIFBlob}, ...]
         // 可以用 saveAs(myImages[i].blob, `segment_${i}.gif`);
@@ -472,10 +476,6 @@ async function captureSlide(mode = "clipboard") {
           myImages.push({ tau: thisTau, dataUrl: animCanvas.toDataURL("image/png")});
         }
       }
-      
-      console.log(myImages.length)
-      console.log(myImages[0].dataUrl)
-      
 
       // step3: 輸出檔案
       if (mode === "gif") {  
