@@ -417,6 +417,7 @@ async function captureSlide(mode = "clipboard") {
           if (cancelProgress) break;
 
           const thisTau = parseInt((frame * perHr / fps) + (mode === "gif-capture" ? aniParas.tau[0] : xPData[0].tau));
+          console.log(thisTau)
 
           // 更新暴風圈圖層
           await setTcCircle(thisTau, $("#animDiv>svg"));
@@ -436,7 +437,6 @@ async function captureSlide(mode = "clipboard") {
             ctx.drawImage(baseCanvas, 0, 0);
             ctx.drawImage(animCanvas, 0, 0);
             ctx.drawImage(topCanvas, 0, 0);
-
 
             // 先存起來，不立即加到 gif
             canvasList.push({ tau: thisTau, canvas: mergedCanvas });
@@ -469,6 +469,10 @@ async function captureSlide(mode = "clipboard") {
           myImages.push({ tau: thisTau, dataUrl: animCanvas.toDataURL("image/png")});
         }
       }
+      
+      console.log(myImages.length)
+      console.log(myImages[0].dataUrl)
+      
 
       // step3: 輸出檔案
       if (mode === "gif") {  

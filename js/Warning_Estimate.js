@@ -1305,7 +1305,7 @@ function setTcCircle(tauTime=0 ,$svg=$("svg#basemap"), showAllMarks = false, hig
   $svg.find("g#tc_circle").contents().remove();
   let xRadius = ""
   
-  console.log(tauTime);
+  // console.log(tauTime);
   
   const {time, ax, ay, R15_x, R15_y, R25_x, R25_y} = getInterpolatePoint(tauTime, PData,["time", "ax", "ay", "R15_x", "R15_y", "R25_x", "R25_y"])
   
