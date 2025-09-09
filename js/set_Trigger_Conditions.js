@@ -456,7 +456,7 @@ async function captureSlide(mode = "clipboard") {
         console.log("canvasList:",canvasList.length)
         const myImages = await buildGifsBySegments(canvasList, segments, fps, pauseSec);
         
-        console.log("myImages.length:" myImages.length)
+        console.log("myImages.length:", myImages.length)
         console.log(myImages[0].dataUrl)
 
         // myImages = [{segment:0, blob:GIFBlob}, {segment:1, blob:GIFBlob}, ...]
