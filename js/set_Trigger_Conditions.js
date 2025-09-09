@@ -432,10 +432,11 @@ async function captureSlide(mode = "clipboard") {
             const mergedCanvas = document.createElement("canvas");
             mergedCanvas.width = baseCanvas.width;
             mergedCanvas.height = baseCanvas.height;
-            const ctx = mergedCanvas.getContext("2d");
+            const ctx = mergedCanvas.getContext("2d", { willReadFrequently: true });
             ctx.drawImage(baseCanvas, 0, 0);
             ctx.drawImage(animCanvas, 0, 0);
             ctx.drawImage(topCanvas, 0, 0);
+
 
             // 先存起來，不立即加到 gif
             canvasList.push({ tau: thisTau, canvas: mergedCanvas });
