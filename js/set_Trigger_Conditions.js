@@ -227,6 +227,7 @@ setTriggerConditions = function() {
 // 下載功能
 // === 全域設定 ===
 let segments = []
+let myImages = [];   // myImages
 
 async function captureSlide(mode = "clipboard") {
   console.log("執行下載模式：", mode);
@@ -297,7 +298,8 @@ async function captureSlide(mode = "clipboard") {
       $("body").append($canvasDiv);
       
       // step2: 根據 segments 建立 myImages 陣列 (convas)
-      let myImages = [];
+      // let myImages = [];
+      myImages = []
       for (let thisTau of segments) {
         if (cancelProgress) break;
         if ($("#btn_animsEnable").prop("checked")===false && (mode === "clipboard" || mode === "png-capture")){
@@ -401,7 +403,8 @@ async function captureSlide(mode = "clipboard") {
       const topCanvas = await makeCanvas($("#topDiv")[0], scaleFactor)
       
       // step2: 建立 myImages 陣列    逐幀處理動畫層（animLayer），並合併三層到一個 canvas
-      let myImages = [];   // myImages
+      // let myImages = [];   // myImages
+      myImages = []
       
       // 2.1 GIF ==> 收集所有 frame → 存入 canvasList ，再建立 GIF myImages
       if (mode.includes("gif")) {
