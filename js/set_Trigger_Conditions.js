@@ -347,8 +347,7 @@ async function captureSlide(mode = "clipboard") {
     
     // Type3: GIF動畫形式 或 PPT投影片 => (分成三個圖層)
     } else if (["gif", "gif-split", "gif-capture", "ppt", "ppt-split", "ppt-gif", "ppt-gif-split"].includes(mode)) {
-      // await renderGif(mode, scaleFactor, segments);
-    
+
       $("#Modal").show();
       $("#progressText").text("正在處理圖層...");
       $("#progressBar").css("width", "0%");
@@ -492,7 +491,8 @@ async function captureSlide(mode = "clipboard") {
         // 多個 GIF → zip 壓縮
         const zip = new JSZip();
         myImages.forEach((img, i) => {
-          zip.file(`${fileName}_${img.segment.join("-")}.gif`, img.blob);
+          console.log(`${fileName}_${img.segment.join("-")}.gif`)
+          zip.file(`${fileName}_${img.segment.join("-")}.gif`, dataURLToBlob(img.dataUrl));
         });
         const content = await zip.generateAsync({ type: "blob" });
         const url = URL.createObjectURL(content);
@@ -624,83 +624,6 @@ function dataURLToBlob(dataUrl) {
   return new Blob([u8arr], { type: mime });
 }
 
-
-
-
-// === GIF 渲染（單段、多段、投影片）===
-async function renderGif(mode, scaleFactor, segments = []) {
-  const fps = 8;
-  const [tauStart, tauEnd] = aniParas.tauRange;
-
-  if (mode.startsWith("ppt-gif")) {
-    const pptx = new PptxGenJS();
-    pptx.defineLayout({ name: "custom", width: 10, height: 5.625 });
-    pptx.layout = "custom";
-
-    for (let [startTau, endTau] of segments) {
-      const gifBlob = await makeGif(startTau, endTau, fps, scaleFactor, true);
-      const topPng = await makeTopLayerPng(scaleFactor);
-
-      let slide = pptx.addSlide();
-      // 上層 PNG
-      slide.addImage({ data: topPng, x: 0, y: 0, w: 10, h: 5.625 });
-      // 中層 GIF
-      slide.addMedia({ type: "online", link: URL.createObjectURL(gifBlob), x: 0, y: 0, w: 10, h: 5.625 });
-      // 下層 PNG
-      slide.addImage({ data: topPng, x: 0, y: 0, w: 10, h: 5.625 });
-    }
-
-    return pptx.writeFile({ fileName: `typhoon_animation_${Date.now()}.pptx` });
-
-  } else {
-    let files = [];
-    for (let [startTau, endTau] of segments) {
-      const gifBlob = await makeGif(startTau, endTau, fps, scaleFactor, false);
-      files.push({ filename: `typhoon_${startTau}-${endTau}.gif`, blob: gifBlob });
-    }
-    return files.length === 1 ? files : await makeZip(files);
-  }
-}
-
-// === GIF 與圖層處理 ===
-async function makeGif(startTau, endTau, fps, scaleFactor, onlyAnimLayer) {
-  return new Promise(async (resolve) => {
-    const gif = new GIF({ workers: 2, quality: 1, workerScript: "./js/gif.worker.js" });
-    const frames = (endTau - startTau) * fps / perHr;
-    
-    console.log(frames,endTau, startTau, fps, perHr)
-
-    for (let f = 0; f <= frames; f++) {
-      const tau = parseInt(startTau + f * perHr / fps);
-      await setTcCircle(tau, $("#animDiv>svg"));
-      await new Promise(requestAnimationFrame);
-
-      const animCanvas = await html2canvas($("#animDiv")[0], {
-        backgroundColor: null, scale: scaleFactor, useCORS: true, removeContainer: true
-      });
-
-      gif.addFrame(animCanvas, { delay: 1000 / fps });
-    }
-
-    gif.on("finished", (blob) => resolve(blob));
-    gif.render();
-  });
-}
-
-async function makeTopLayerPng(scaleFactor) {
-  const topCanvas = await html2canvas($("#slide")[0], {
-    backgroundColor: null, scale: scaleFactor, useCORS: true, removeContainer: true
-  });
-  return topCanvas.toDataURL("image/png");
-}
-
-async function makeZip(files) {
-  const zip = new JSZip();
-  files.forEach(f => zip.file(f.filename, f.blob));
-  const blob = await zip.generateAsync({ type: "blob" });
-  downloadBlob(blob, `typhoon_${Date.now()}.zip`);
-  return [{ filename: `typhoon_${Date.now()}.zip`, blob }];
-}
 
 
 // ---------------------------------------------------------------------------------------------------------------
