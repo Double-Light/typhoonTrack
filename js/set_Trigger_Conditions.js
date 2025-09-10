@@ -472,15 +472,15 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
       height: canvasList[0].canvas.height,
       workerScript: "./js/gif.worker.js"
     });
+    
+    // 先篩選出需要的 frames
+    const segmentFrames = canvasList.filter(frame => frame.tau >= startTau && frame.tau <= endTau);
 
-    canvasList.forEach((frame, idx) => {
-      if (frame.tau >= startTau && frame.tau <= endTau) {
-        gif.addFrame(frame.canvas, {
-          delay: (idx + 1 === canvasList.length && pauseSec > 0)
-            ? 1000 * pauseSec
-            : 1000 / fps
-        });
-      }
+    segmentFrames.forEach((frame, idx) => {
+      const isLast = idx === segmentFrames.length - 1;
+      gif.addFrame(frame.canvas, {
+        delay: (isLast && pauseSec > 0) ? 1000 * pauseSec : 1000 / fps
+      });
     });
 
     gifs.push(new Promise((resolve) => {
@@ -503,6 +503,14 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
 
 // === Step C: 檔案輸出 ===
 async function exportFile(mode, myImages, fileName) {
+  // 🔑 確保 myImages 不是 Promise，而是陣列
+  myImages = await Promise.resolve(myImages);
+
+  if (!Array.isArray(myImages) || myImages.length === 0) {
+    console.error("⚠️ exportFile: myImages 無效或為空陣列");
+    return;
+  }
+  
   $("#progressText").text("檔案輸出中...");
 
   if (mode === "clipboard") {
