@@ -493,7 +493,7 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
     
     // ⏳ 更新進度條
     const percent = Math.round((1/2 + i/segments.length/2) * 100);
-    // console.log(thisTau,frame,totalFrames,percent)
+    console.log(thisTau,i,segments.length,percent)
     $("#progressText").text("正在轉成GIF...");
     $("#progressBar").css("width", `${percent}%`);
   }
@@ -508,21 +508,21 @@ async function exportFile(mode, myImages, fileName) {
   if (mode === "clipboard") {
     await navigator.clipboard.write([new ClipboardItem({ "image/png": myImages[0].blob })]);
     alert("已複製畫面到剪貼簿！");
-  } else if (mode.includes("png")) {
-    if (myImages.length === 1) {
+  } else if (mode.startsWith("png")) {  
+    if (myImages.length === 1) {  // 單一 PNG
       downloadBlob(myImages[0].blob, `${fileName}.png`);
-    } else {
+    } else {                      // 多個 PNG → zip
       await downloadZip(myImages, fileName, "png");
     }
 
-  } else if (mode.includes("gif")) {
+  } else if (mode.startsWith("gif")) {
     if (myImages.length === 1) {  // 單一 GIF
       downloadBlob(myImages[0].blob, `${fileName}.gif`);
     } else {                      // 多個 GIF → zip
       await downloadZip(myImages, fileName, "gif");
     }
     
-  } else if (mode.includes("pdf")) {
+  } else if (mode.startsWith("pdf")) {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF("landscape", "pt", [$("#svgObj").width(), $("#svgObj").height()]);
     for (let i = 0; i < myImages.length; i++) {
@@ -634,7 +634,7 @@ function downloadBlob(blob, fileName) {
 async function downloadZip(images, fileName, ext) {
   const zip = new JSZip();
   images.forEach(img => {
-    zip.file(`${fileName}_tau=${img.tau}.${ext}`, img.blob);
+    zip.file(`${fileName}_tau=${img.tau || img.segment.join("-")}.${ext}`, img.blob);
   });
   const content = await zip.generateAsync({ type: "blob" });
   downloadBlob(content, `${fileName}.zip`);
