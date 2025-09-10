@@ -323,13 +323,13 @@ function buildSegments(mode) {
     const [tauStart, tauEnd] = [xPData[0].tau, xPData.at(-1).tau];                     // 預報起訖時段
     const splitTau = warning_data.filter(item => item.tau > 0).map(item => item.tau);  // 分段時間點
 
-    if (mode === "gif-split") {     // 回傳分段時間點
+    if (mode.includes("gif-split")) {     // 回傳分段時間點
       return [
         [tauStart, splitTau[0]],
         ...splitTau.map((t, i) => i < splitTau.length - 1 ? [t, splitTau[i + 1]] : null).filter(Boolean),
         [splitTau.at(-1), tauEnd]
       ];
-    } else if (mode === "gif-capture") {
+    } else if (mode.includes("gif-capture")) {
       return [aniParas.tauRange];   // 動畫時間範圍
     } else {
       return [[tauStart, tauEnd]];  // 回傳起訖預報時段
@@ -470,7 +470,8 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
       quality: 1,
       width: canvasList[0].canvas.width,
       height: canvasList[0].canvas.height,
-      workerScript: "./js/gif.worker.js"
+      workerScript: "./js/gif.worker.js",
+      transparent: "#fff0"  // 透明色
     });
     
     // 先篩選出需要的 frames
@@ -479,23 +480,27 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
     segmentFrames.forEach((frame, idx) => {
       const isLast = idx === segmentFrames.length - 1;
       gif.addFrame(frame.canvas, {
+        copy: true, // 避免後續污染
         delay: (isLast && pauseSec > 0) ? 1000 * pauseSec : 1000 / fps
       });
     });
 
     gifs.push(new Promise((resolve) => {
+      gif.on("progress", (p) => {
+        // ⏳ 更新進度條
+        const percent = Math.round((1/2 + i/segments.length/2) * 100);
+        console.log(i,segments.length,percent)
+        $("#progressText").text("正在轉成GIF...");
+        $("#progressBar").css("width", `${percent}%`);
+      });
+      
       gif.on("finished", async (blob) => {
         const dataUrl = await blobToDataUrl(blob);
         resolve({ segment: segments[i], blob, dataUrl });
       });
       gif.render();
     }));
-    
-    // ⏳ 更新進度條
-    const percent = Math.round((1/2 + i/segments.length/2) * 100);
-    console.log(i,segments.length,percent)
-    $("#progressText").text("正在轉成GIF...");
-    $("#progressBar").css("width", `${percent}%`);
+  
   }
 
   return Promise.all(gifs);
