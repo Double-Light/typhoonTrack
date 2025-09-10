@@ -412,13 +412,13 @@ async function handleImage(mode,layerType,scaleFactor){
 
         // 先存起來，不立即加到 gif
         canvasList.push({ tau: thisTau, canvas: mergedCanvas });
-        
-        // ⏳ 更新進度條
-        const percent = Math.round((frame / totalFrames/2) * 100);
-        // console.log(thisTau,frame,totalFrames,percent)
-        $("#progressText").text("正在逐幀處理影格...");
-        $("#progressBar").css("width", `${percent}%`);
       }
+      
+      // ⏳ 更新進度條
+      const percent = Math.round((frame / totalFrames/2) * 100);
+      // console.log(thisTau,frame,totalFrames,percent)
+      $("#progressText").text("正在逐幀處理影格...");
+      $("#progressBar").css("width", `${percent}%`);
     }
     
     // 使用：segments = [[tauStart1, tauEnd1], [tauStart2, tauEnd2], ...]
@@ -470,8 +470,8 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
       quality: 1,
       width: canvasList[0].canvas.width,
       height: canvasList[0].canvas.height,
-      workerScript: "./js/gif.worker.js",
-      transparent: "#fff0"  // 透明色
+      workerScript: "./js/gif.worker.js"
+      // transparent: "#fff0"  // 透明色
     });
     
     // 先篩選出需要的 frames
@@ -488,8 +488,8 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
     gifs.push(new Promise((resolve) => {
       gif.on("progress", (p) => {
         // ⏳ 更新進度條
-        const percent = Math.round((1/2 + i/segments.length/2) * 100);
-        console.log(i,segments.length,percent)
+        const percent = Math.round((1/2 + p/2) * 100);
+        // console.log(i,segments.length,percent)
         $("#progressText").text("正在轉成GIF...");
         $("#progressBar").css("width", `${percent}%`);
       });
@@ -546,7 +546,7 @@ async function exportFile(mode, myImages, fileName, scaleFactor) {
     await pdf.save(`${fileName}.pdf`);
     
   } else if (mode.startsWith("ppt")) {  // 輸出檔案類型為 PPT
-    console.log("輸出檔案類型為 PPT")
+    // console.log("輸出檔案類型為 PPT")
     // slide 寬高 換算成英吋
     const widthIn = 720 / 72;
     const heightIn = 405 / 72;
