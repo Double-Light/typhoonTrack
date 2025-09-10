@@ -85,11 +85,13 @@ select {
 }
 
 #slide[ppt_theme_type="Right_Map_1"] .warning-text-History.active span{
-  background: #c9c9c9b3;
+  background: #ff0000b3;
+  color: #FFF;
 }
 
 #slide[ppt_theme_type="Right_Map_1"] .warning-text-Estimate.active span{
-  background: #FFC9C9B3;
+  background: #3d3d3db3;
+  color: #FFF;
 }
 
 .dragMode #basemap {
