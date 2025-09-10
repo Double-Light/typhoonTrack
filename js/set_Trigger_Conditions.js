@@ -284,7 +284,7 @@ async function captureSlide(mode = "clipboard") {
   } catch (err) {
     console.error("[captureSlide] 截圖錯誤：", err);
     alert("截圖發生錯誤！詳細請見 console log。");
-    ["#baseDiv", "#animDiv", "#topDiv", "#canvasDiv"].forEach(sel => $(sel).remove());
+    // ["#baseDiv", "#animDiv", "#topDiv", "#canvasDiv"].forEach(sel => $(sel).remove());
     $("#editor-panel").show();
     return
   } 
@@ -292,7 +292,7 @@ async function captureSlide(mode = "clipboard") {
   // === Step C: 檔案輸出 ===
   try {
     if (["clipboard", "png-capture", "png", "png-split", "pdf", "pdf-split","gif", "gif-split", "gif-capture", "ppt", "ppt-split", "ppt-gif", "ppt-gif-split"].includes(mode)) {
-      await exportFile(mode, myImages, fileName) // 依 mode 匯出
+      await exportFile(mode, myImages, fileName, scaleFactor) // 依 mode 匯出
     } else {
       console.warn("[captureSlide] 未知模式：", mode);
     }
@@ -502,7 +502,7 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
 }
 
 // === Step C: 檔案輸出 ===
-async function exportFile(mode, myImages, fileName) {
+async function exportFile(mode, myImages, fileName, scaleFactor) {
   // 🔑 確保 myImages 不是 Promise，而是陣列
   myImages = await Promise.resolve(myImages);
 
