@@ -493,7 +493,7 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
     
     // ⏳ 更新進度條
     const percent = Math.round((1/2 + i/segments.length/2) * 100);
-    console.log(thisTau,i,segments.length,percent)
+    console.log(i,segments.length,percent)
     $("#progressText").text("正在轉成GIF...");
     $("#progressBar").css("width", `${percent}%`);
   }
