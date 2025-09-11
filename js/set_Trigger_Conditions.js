@@ -492,6 +492,7 @@ async function handleImage(mode,layerType,scaleFactor){
 // === GIF Builder: 回傳 { segment, blob, dataUrl } ===
 async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
   const gifs = [];
+  let percents = new Array(segments.length).fill(0);
   
   $("#progressText").text("正在轉成GIF...");
 
@@ -516,7 +517,6 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
         delay: (isLast && pauseSec > 0) ? 1000 * pauseSec : 1000 / fps
       });
     });
-    let percents = new Array(segments.length).fill(0);
     gifs.push(new Promise((resolve) => {
       gif.on("progress", (p) => {
         // ⏳ 更新進度條
