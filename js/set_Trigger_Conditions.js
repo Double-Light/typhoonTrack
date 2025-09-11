@@ -492,6 +492,8 @@ async function handleImage(mode,layerType,scaleFactor){
 // === GIF Builder: 回傳 { segment, blob, dataUrl } ===
 async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
   const gifs = [];
+  
+  $("#progressText").text("正在轉成GIF...");
 
   for (let i = 0; i < segments.length; i++) {
     const [startTau, endTau] = segments[i];
@@ -514,16 +516,18 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
         delay: (isLast && pauseSec > 0) ? 1000 * pauseSec : 1000 / fps
       });
     });
-    let g = 0
+    let percents = new Array(segments.length).fill(0);
     gifs.push(new Promise((resolve) => {
-      gif.on("finished", async (blob) => {
+      gif.on("progress", (p) => {
         // ⏳ 更新進度條
-        g+=1
-        const percent = Math.min(Math.round((1/2 + g/segments.length/2) * 100),99);
-        console.log(i,g,segments.length,percent)
-        $("#progressText").text("正在轉成GIF...");
+        percents[i] = p
+        const percent = Math.min(Math.round((1/2 + eval(percents.join('+'))/segments.length/2) * 100),99);
+        console.log(i,p,percents,percent)
+        $("#progressText").text(`正在轉成GIF... (${percent}%)`);
         $("#progressBar").css("width", `${percent}%`);
-        
+      });
+
+      gif.on("finished", async (blob) => {
         const dataUrl = await blobToDataUrl(blob);
         resolve({ segment: segments[i], blob, dataUrl });
       });
