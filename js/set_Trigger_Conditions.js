@@ -455,6 +455,17 @@ async function handleImage(mode,layerType,scaleFactor){
     // console.log("canvasList:",canvasList.length)
     myImages = await buildGifsBySegments(canvasList, segments, fps, pauseSec);
     
+    if (mode.startsWith("ppt")){
+      const tau = 0
+      await setTcCircle(tau, $(`#animDiv>svg`), true, false);
+      await new Promise(requestAnimationFrame); // 不等畫面顯示
+      
+      // 擷取 anim 層
+      const canvas = await makeCanvas($("#animDiv")[0], scaleFactor)
+      const blob = await canvasToBlob(canvas);
+      myImages = [{ tau, blob, dataUrl: canvas.toDataURL("image/png") }...myImages]
+    }
+    
   // 2.2 非GIF ==> 依照 segments 建立 myImages
   } else { 
     let s = 0
@@ -520,9 +531,9 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
     gifs.push(new Promise((resolve) => {
       gif.on("progress", (p) => {
         // ⏳ 更新進度條
-        percents[i] = p
+        percents[i] = p // 單張GIF進度 (0~1)
         const percent = Math.min(Math.round((1/2 + eval(percents.join('+'))/segments.length/2) * 100),99);
-        console.log(i,p,percents.map(num => num.toFixed(2)),percent)
+        // console.log(i,p.toFixed(2),percents.map(num => num.toFixed(2)),percent)
         $("#progressText").text(`正在轉成GIF... (${percent}%)`);
         $("#progressBar").css("width", `${percent}%`);
       });
