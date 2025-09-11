@@ -399,7 +399,17 @@ async function handleImage(mode,layerType,scaleFactor){
       const animCanvas = await makeCanvas($("#animDiv")[0], scaleFactor)
       
       if (mode.includes("ppt")) {
-        canvasList.push({ tau: thisTau, canvas: animCanvas });
+        // 合併兩層
+        const mergedCanvas = document.createElement("canvas");
+        mergedCanvas.width = baseCanvas.width;
+        mergedCanvas.height = baseCanvas.height;
+        const ctx = mergedCanvas.getContext("2d", { willReadFrequently: true });
+        ctx.clearRect(0, 0, baseCanvas.width, baseCanvas.height); // 先清空背景
+        ctx.drawImage(baseCanvas, 0, 0);
+        ctx.drawImage(animCanvas, 0, 0);
+
+        // 先存起來，不立即加到 gif
+        canvasList.push({ tau: thisTau, canvas: mergedCanvas });
       } else {
         // 合併三層
         const mergedCanvas = document.createElement("canvas");
@@ -563,7 +573,7 @@ async function exportFile(mode, myImages, fileName, scaleFactor) {
     // ✅ Debug: 輸出 baseCanvas base64 圖像
     // console.log(`baseCanvas:`, baseCanvas.toDataURL());
 
-    const baseImgData = baseCanvas.toDataURL("image/png");
+    // const baseImgData = baseCanvas.toDataURL("image/png");
     const topImgData = topCanvas.toDataURL("image/png");
     
     console.log(topCanvas)
@@ -571,7 +581,7 @@ async function exportFile(mode, myImages, fileName, scaleFactor) {
     // PPTX with PNG
     for (let img of myImages) {
       const slide = pptx.addSlide();
-      slide.addImage({ data: baseImgData, x: 0, y: 0, w: "100%", h: "100%" });
+      // slide.addImage({ data: baseImgData, x: 0, y: 0, w: "100%", h: "100%" });
       slide.addImage({ data: img.dataUrl, x: 0, y: 0, w: "100%", h: "100%" });
       slide.addImage({ data: topImgData,  x: 0, y: 0, w: "100%", h: "100%" });
     }
