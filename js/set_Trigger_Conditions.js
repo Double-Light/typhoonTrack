@@ -463,7 +463,7 @@ async function handleImage(mode,layerType,scaleFactor){
       // 擷取 anim 層
       const canvas = await makeCanvas($("#animDiv")[0], scaleFactor)
       const blob = await canvasToBlob(canvas);
-      myImages = [{ tau, blob, dataUrl: canvas.toDataURL("image/png") }...myImages]
+      myImages = [{ tau, blob, dataUrl: canvas.toDataURL("image/png") }, ...myImages]
     }
     
   // 2.2 非GIF ==> 依照 segments 建立 myImages
