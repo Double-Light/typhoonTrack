@@ -248,9 +248,7 @@ async function captureSlide(mode = "clipboard") {
   if (!["clipboard", "png-capture"].includes(mode)) { showProgress =true}
   
   const scaleFactor = 2.666667;
-  const fileName = `${$("#slide-title").html()}路徑預測示意圖_${moment(
-    $("select#trackFcstList option:selected").val()
-  ).format("DD日HH時")}`;
+  const fileName = `${$("#slide-title").text().trim()}路徑預測示意圖_${moment($("select#trackFcstList option:selected").val()).format("DD日HH時")}`;
   
   // 進度條初始設定
   if (showProgress) {
