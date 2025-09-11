@@ -406,6 +406,7 @@ async function handleImage(mode,layerType,scaleFactor){
         mergedCanvas.width = baseCanvas.width;
         mergedCanvas.height = baseCanvas.height;
         const ctx = mergedCanvas.getContext("2d", { willReadFrequently: true });
+        ctx.clearRect(0, 0, baseCanvas.width, baseCanvas.height); // 先清空背景
         ctx.drawImage(baseCanvas, 0, 0);
         ctx.drawImage(animCanvas, 0, 0);
         ctx.drawImage(topCanvas, 0, 0);
@@ -480,7 +481,7 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
     segmentFrames.forEach((frame, idx) => {
       const isLast = idx === segmentFrames.length - 1;
       gif.addFrame(frame.canvas, {
-        copy: true, // 避免後續污染
+        // copy: true, // 避免後續污染
         delay: (isLast && pauseSec > 0) ? 1000 * pauseSec : 1000 / fps
       });
     });
@@ -488,7 +489,7 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
     gifs.push(new Promise((resolve) => {
       gif.on("progress", (p) => {
         // ⏳ 更新進度條
-        const percent = Math.round((1/2 + i/segments.length/2 + p/segments.length/2) * 100);
+        const percent = Math.round((1/2 + p/2) * 100);
         console.log(i,p,segments.length,percent)
         $("#progressText").text("正在轉成GIF...");
         $("#progressBar").css("width", `${percent}%`);
