@@ -447,7 +447,7 @@ async function handleImage(mode,layerType,scaleFactor){
       // ⏳ 更新進度條
       const percent = Math.round((frame / totalFrames/2) * 100);
       // console.log(thisTau,frame,totalFrames,percent)
-      $("#progressText").text("正在逐幀處理影格...");
+      $("#progressText").text(`正在逐幀處理影格... (${percent}%)`);
       $("#progressBar").css("width", `${percent}%`);
     }
     
@@ -522,7 +522,7 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
         // ⏳ 更新進度條
         percents[i] = p
         const percent = Math.min(Math.round((1/2 + eval(percents.join('+'))/segments.length/2) * 100),99);
-        console.log(i,p,percents,percent)
+        console.log(i,p,percents.map(num => num.toFixed(2)),percent)
         $("#progressText").text(`正在轉成GIF... (${percent}%)`);
         $("#progressBar").css("width", `${percent}%`);
       });
