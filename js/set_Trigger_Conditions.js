@@ -488,8 +488,8 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
     gifs.push(new Promise((resolve) => {
       gif.on("progress", (p) => {
         // ⏳ 更新進度條
-        const percent = Math.round((1/2 + (i / segments.length / 2) + p / segments.length / 2) * 100);
-        // console.log(i,segments.length,percent)
+        const percent = Math.round((1/2 + i/segments.length/2 + p/segments.length/2) * 100);
+        console.log(i,p,segments.length,percent)
         $("#progressText").text("正在轉成GIF...");
         $("#progressBar").css("width", `${percent}%`);
       });
