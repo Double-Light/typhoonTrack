@@ -375,7 +375,7 @@ function buildSegments(mode) {
 // === Step B: 影像處理 ===
 async function handleImage(mode,layerType,scaleFactor){
   let myImages = []
-  
+
   // console.log(`開始影像處理:`, mode,layerType,scaleFactor);
   if (layerType === "SingleLayer") {   
     const $canvasDiv = await makeCanvasDiv("canvasDiv",$("#basemap"),"foreignObject, animate",$("#slide"))
@@ -406,8 +406,9 @@ async function handleImage(mode,layerType,scaleFactor){
     const totalFrames = totalDuration * fps;
     
     // 擷取靜態圖層
+    let baseCanvas= null
     if (!mode.includes("ppt")) {
-      const baseCanvas = await makeCanvas($("#baseDiv")[0], scaleFactor)
+      baseCanvas = await makeCanvas($("#baseDiv")[0], scaleFactor)
     }
     const topCanvas = await makeCanvas($("#topDiv")[0], scaleFactor)
     
