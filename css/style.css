@@ -585,6 +585,14 @@ select {
   transition: width 0.3s;
 }
 
+#progressContent.wrong #progressText {
+  color: red;
+}
+
+#progressContent.wrong #progressBar {
+  background: #b6b6b6;
+}
+
 .btn {
   display: inline-block;
   font-weight: 400;
