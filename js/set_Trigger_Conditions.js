@@ -254,14 +254,14 @@ async function captureSlide(mode = "clipboard") {
   
   // 進度條初始設定
   if (showProgress) {
-    $("#Modal").show();
     $("#productContent").hide();
-    $("#progressContent").show();
     $("#progressText").text("正在處理圖層...");
     $("#progressBar").css("width", "0%");
+    $("#progressContent").removeClass("wrong").show();
     $("#modalCancelBtn").hide();
     $("#modalStopBtn").show();
     $("#modalDoneBtn").prop("disabled", true);
+    $("#Modal").show();
   }
 
   // === Step A: 設定 segments ===
@@ -273,7 +273,15 @@ async function captureSlide(mode = "clipboard") {
     console.log("[captureSlide] segments:", segments);
   } catch (err) {
     console.error("[captureSlide] 建立 segments 發生錯誤：", err);
-    alert("無法建立分段設定！詳細請見 console log。");
+    // alert("無法建立分段設定！詳細請見 console log。");
+    
+    // 錯誤回報
+    $("#progressContent").addClass("wrong");
+    $("#progressText").text("分段設定出錯！詳情請見log");
+    $("#modalCancelBtn").show();
+    $("#modalStopBtn").hide();
+    $("#modalDoneBtn").prop("disabled", false);
+    
     $("#editor-panel").show();
     return;
   }
@@ -283,8 +291,16 @@ async function captureSlide(mode = "clipboard") {
     myImages = await handleImage(mode,layerType,scaleFactor);
   } catch (err) {
     console.error("[captureSlide] 截圖錯誤：", err);
-    alert("截圖發生錯誤！詳細請見 console log。");
-    // ["#baseDiv", "#animDiv", "#topDiv", "#canvasDiv"].forEach(sel => $(sel).remove());
+    // alert("截圖發生錯誤！詳細請見 console log。");
+    ["#baseDiv", "#animDiv", "#topDiv", "#canvasDiv"].forEach(sel => $(sel).remove());
+    
+    // 錯誤回報
+    $("#progressContent").addClass("wrong");
+    $("#progressText").text("截圖發生錯誤！詳情請見log");
+    $("#modalCancelBtn").show();
+    $("#modalStopBtn").hide();
+    $("#modalDoneBtn").prop("disabled", false);
+    
     $("#editor-panel").show();
     return
   } 
@@ -293,26 +309,30 @@ async function captureSlide(mode = "clipboard") {
   try {
     if (["clipboard", "png-capture", "png", "png-split", "pdf", "pdf-split","gif", "gif-split", "gif-capture", "ppt", "ppt-split", "ppt-gif", "ppt-gif-split"].includes(mode)) {
       await exportFile(mode, myImages, fileName, scaleFactor) // 依 mode 匯出
+      
+      // 計算費時
+      const tEnd = performance.now();
+      const seconds = ((tEnd - tStart) / 1000).toFixed(1);
+      $("#progressBar").css("width", "100%");
+      $("#progressText").text(`下載完成，用時 ${seconds} 秒`);
+      console.log(`[captureSlide] 完成，耗時 ${Math.round(performance.now() - tStart)}ms`);
     } else {
       console.warn("[captureSlide] 未知模式：", mode);
     }
   } catch (err) {
     console.error("[captureSlide] 檔案輸出錯誤：", err);
-    alert("檔案輸出發生錯誤！詳細請見 console log。");
-    $("#editor-panel").show();
+    // alert("檔案輸出發生錯誤！詳細請見 console log。");
+    
+    // 錯誤回報
+    $("#progressContent").addClass("wrong");
+    $("#progressText").text("檔案輸出錯誤！詳情請見log");
+
   } finally {
     ["#baseDiv", "#animDiv", "#topDiv", "#canvasDiv"].forEach(sel => $(sel).remove());
     
-    // 計算費時
-    const tEnd = performance.now();
-    const seconds = ((tEnd - tStart) / 1000).toFixed(1);
-    $("#progressBar").css("width", "100%");
-    $("#progressText").text(`下載完成，用時 ${seconds} 秒`);
     $("#modalCancelBtn").show();
     $("#modalStopBtn").hide();
     $("#modalDoneBtn").prop("disabled", false);
-    
-    console.log(`[captureSlide] 完成，耗時 ${Math.round(performance.now() - tStart)}ms`);
     $("#editor-panel").show();
   }
 }
@@ -361,12 +381,18 @@ async function handleImage(mode,layerType,scaleFactor){
     const $canvasDiv = await makeCanvasDiv("canvasDiv",$("#basemap"),"foreignObject, animate",$("#slide"))
   } else if (layerType === "ThreeLayer") {  // 將截圖區分為三層：底圖層（baseLayer）、動畫層（animLayer）、 標題層（topLayer
     // 1. 底圖層（baseLayer）：為SVG內不變動的部分。複製 svg 並移除變動部分、foreignObject與animate
-    const $baseDiv = await makeCanvasDiv("baseDiv",$("#basemap"),"g#warning_marks .mark-fcst, g#tc_circle, foreignObject, animate")
-
-    // 2. 動畫層（animLayer）：僅保留SVG內會變動的部分(只留下 #warning_marks .mark-fcst 與  #tc_circle)
-    const $animDiv = await makeCanvasDiv("animDiv",$("#basemap"),"defs style, defs>g:not(#tyIcon_past,#tyIcon_fcst), >g:not(#warning_range), g#warning_circle,g#warning_marks .mark-past, foreignObject, animate")
+    if (!mode.includes("ppt")) {
+      const $baseDiv = await makeCanvasDiv("baseDiv",$("#basemap"),"g#warning_marks .mark-fcst, g#tc_circle, foreignObject, animate")
+    }
     
-    // 3. 標題層（ topLayer）：擷取 SVG foreignObject 內的 #silde（HTML文字區）
+    // 2. 動畫層（animLayer）：僅保留SVG內會變動的部分(只留下 #warning_marks .mark-fcst 與  #tc_circle)
+    if (mode.includes("ppt")) {
+      const $animDiv = await makeCanvasDiv("animDiv",$("#basemap"),"foreignObject, animate") // 只移除 foreignObject 與 animate
+    } else {
+      const $animDiv = await makeCanvasDiv("animDiv",$("#basemap"),"defs style, defs>g:not(#tyIcon_past,#tyIcon_fcst), >g:not(#warning_range), g#warning_circle,g#warning_marks .mark-past, foreignObject, animate")
+    }
+    
+    // 3. 標題層（topLayer） ：擷取 SVG foreignObject 內的 #silde（HTML文字區）
     const $topDiv = await makeCanvasDiv("topDiv",$("#svgObj #slide"))
   }
 
@@ -380,7 +406,9 @@ async function handleImage(mode,layerType,scaleFactor){
     const totalFrames = totalDuration * fps;
     
     // 擷取靜態圖層
-    const baseCanvas = await makeCanvas($("#baseDiv")[0], scaleFactor)
+    if (!mode.includes("ppt")) {
+      const baseCanvas = await makeCanvas($("#baseDiv")[0], scaleFactor)
+    }
     const topCanvas = await makeCanvas($("#topDiv")[0], scaleFactor)
     
     // ✅ Debug: 輸出 baseCanvas base64 圖像
@@ -399,17 +427,7 @@ async function handleImage(mode,layerType,scaleFactor){
       const animCanvas = await makeCanvas($("#animDiv")[0], scaleFactor)
       
       if (mode.includes("ppt")) {
-        // 合併兩層
-        const mergedCanvas = document.createElement("canvas");
-        mergedCanvas.width = baseCanvas.width;
-        mergedCanvas.height = baseCanvas.height;
-        const ctx = mergedCanvas.getContext("2d", { willReadFrequently: true });
-        ctx.clearRect(0, 0, baseCanvas.width, baseCanvas.height); // 先清空背景
-        ctx.drawImage(baseCanvas, 0, 0);
-        ctx.drawImage(animCanvas, 0, 0);
-
-        // 先存起來，不立即加到 gif
-        canvasList.push({ tau: thisTau, canvas: mergedCanvas });
+        canvasList.push({ tau: thisTau, canvas: animCanvas });
       } else {
         // 合併三層
         const mergedCanvas = document.createElement("canvas");
@@ -491,16 +509,17 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
     segmentFrames.forEach((frame, idx) => {
       const isLast = idx === segmentFrames.length - 1;
       gif.addFrame(frame.canvas, {
-        // copy: true, // 避免後續污染
+        copy: true, // 避免後續污染
         delay: (isLast && pauseSec > 0) ? 1000 * pauseSec : 1000 / fps
       });
     });
-
+    let g = 0
     gifs.push(new Promise((resolve) => {
       gif.on("finished", async (blob) => {
         // ⏳ 更新進度條
-        const percent = Math.round((1/2 + i/segments.length/2) * 100);
-        console.log(i,segments.length,percent)
+        g+=1
+        const percent = Math.min(Math.round((1/2 + g/segments.length/2) * 100),99);
+        console.log(i,g,segments.length,percent)
         $("#progressText").text("正在轉成GIF...");
         $("#progressBar").css("width", `${percent}%`);
         
@@ -565,7 +584,7 @@ async function exportFile(mode, myImages, fileName, scaleFactor) {
     pptx.layout = "custom";
     
     // 擷取靜態圖層
-    const baseCanvas = await makeCanvas($("#baseDiv")[0], scaleFactor)
+    // const baseCanvas = await makeCanvas($("#baseDiv")[0], scaleFactor)
     const topCanvas = await makeCanvas($("#topDiv")[0], scaleFactor)
     
     // ✅ Debug: 輸出 baseCanvas base64 圖像
@@ -656,7 +675,7 @@ function downloadBlob(blob, fileName) {
 async function downloadZip(images, fileName, ext) {
   const zip = new JSZip();
   images.forEach(img => {
-    zip.file(`${fileName}_tau=${img.tau || img.segment.join("-")}.${ext}`, img.blob);
+    zip.file(`${fileName}_tau=${img.tau ?? img.segment.join("-")}.${ext}`, img.blob);
   });
   const content = await zip.generateAsync({ type: "blob" });
   downloadBlob(content, `${fileName}.zip`);
