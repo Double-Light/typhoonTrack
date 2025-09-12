@@ -1239,6 +1239,10 @@ function showHideKeypoint(checkElement) {
 function changeWarning($warnGroup, changeType) {
   // console.log("呼叫 changeWarning")
   var warnType = $warnGroup.attr("name");
+  
+  // 停用動畫
+  $("#btn_animsEnable").prop("checked",false)
+  setTcAnimate()
 
   if (changeType === "changeTime") {
     var $inputElement = $warnGroup.find(".warning-time");
