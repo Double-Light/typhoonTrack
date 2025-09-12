@@ -924,7 +924,7 @@ function getTcAniDatas (aniStartTau = 0,aniEndTau = xPData[xPData.length-1]['tau
 // 建立暴風半徑動畫
 function setTcAnimate (aniType="all") {
   $("g#tc_circle").contents().remove();
-  $("#warning_marks >g animate").remove();  //移除所有標記顯示/隱藏動畫
+  $("#warning_marks >g animate").remove();            // 移除所有標記顯示/隱藏動畫
   $("#warning_marks .mark-fcst").css("opacity", "");  // 預報時段標記全顯示
 
   let xRadius = ""
@@ -1161,6 +1161,10 @@ function setTcAnimate (aniType="all") {
 
 // 繪製TcCircle
 function setTcCircle(tauTime=0 ,$svg=$("svg#basemap"), showAllMarks = false, highlight = false) {
+  $("g#tc_circle").contents().remove();
+  $("#warning_marks >g animate").remove();            // 移除所有標記顯示/隱藏動畫
+  $("#warning_marks .mark-fcst").css("opacity", "");  // 預報時段標記全顯示
+  
   $svg.find("g#tc_circle").contents().remove();
   let xRadius = ""
   

@@ -128,7 +128,7 @@ setTriggerConditions = function() {
       if (document.exitFullscreen) document.exitFullscreen();
       else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
       else if (document.msExitFullscreen) document.msExitFullscreen();
-      $overlay.appendTo($body);
+      $overlay.appendTo($("body"));
     }
     // setDragRange()   // 設定區塊拖曳範圍
   });
@@ -501,7 +501,10 @@ async function handleImage(mode,layerType,scaleFactor){
 // === GIF Builder: 回傳 { segment, blob, dataUrl } ===
 async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
   const gifs = [];
-  let percents = new Array(segments.length).fill(0);
+  const numerators = segments.map(segment => segment[1]-segment[0]+1) // 各段 tau 數量
+  const denominator = eval(numerators.join('+'))                      // tau數量總和     => 作為進度分母
+  let multiplys = new Array(segments.length).fill(0);                 // 進度*該段tau數量 => 作為進度分子
+  
   
   $("#progressText").text("正在轉成GIF...");
 
@@ -529,8 +532,8 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
     gifs.push(new Promise((resolve) => {
       gif.on("progress", (p) => {
         // ⏳ 更新進度條
-        percents[i] = p // 單張GIF進度 (0~1)
-        const percent = Math.min(Math.round((1/2 + eval(percents.join('+'))/segments.length/2) * 100),99);
+        multiplys[i] = p*numerators[i] // 單張GIF進度(0~1) * 該段 tau 數量
+        const percent = Math.min(Math.round((1/2 + eval(multiplys.join('+'))/denominator/2) * 100),99);
         // console.log(i,p.toFixed(2),percents.map(num => num.toFixed(2)),percent)
         $("#progressText").text(`正在轉成GIF... (${percent}%)`);
         $("#progressBar").css("width", `${percent}%`);
