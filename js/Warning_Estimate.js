@@ -1271,7 +1271,7 @@ function changeWarning($warnGroup, changeType) {
         warningTime = startTime;
       }
 
-      $inputElement.attr('value', warningTime).val(warningTime);
+      $inputElement.attr('value', warningTime).val(warningTime); // 更新時間
       $warnGroup.find(".warning-check").prop('checked', true);
 
       Warning_Data.forEach(item => {
@@ -1313,9 +1313,9 @@ function changeWarning($warnGroup, changeType) {
 
     if (obj !== undefined) {
       obj.text = newText;
-      obj.source = "Self_Editing";
+      // obj.source = "Self_Editing";
       
-      $warnGroup.attr('source', "Self_Editing");
+      // $warnGroup.attr('source', "Self_Editing");
     }
     // 更新重要時間點 keypoint-content 與 warning_marks
     [`#keypoint-content .warning-text[name='${warnType}'] span:eq(3)`,
