@@ -300,25 +300,25 @@
         // 投影片資訊(內容、位置)
         if ($("select#ppt_theme_type option:selected").val() === 'Full_Map_1') {
           myData['slide_info'] = {
-            'title': $("#slide-title").html(),
-            'description': $("#slide-description").html(),
-            'production': $("#slide-production div").html(),
+            'title': $("#slide-title").text(),
+            'description': $("#slide-description").text(),
+            'production': $("#slide-production div").text(),
             'keypoint_position': [$("#keypoint").position().left, $("#keypoint").position().top]
           }
         } else if ($("select#ppt_theme_type option:selected").val() === 'Right_Map_1') {
           myData['slide_info'] = {
-            'title': $("#slide-title").html().replace(/<\/p>/g, '').replace(/<p>/g, '\n').trim(),
-            'production': $("#slide-production div").html(),
+            'title': $("#slide-title").text().trim(),
+            'production': $("#slide-production div").text(),
             'currInfo': {
-              'time': $('#slide-description-table td[name="curr_time"]').html(),
-              'coordinate': $('#slide-description-table td[name="curr_coordinate"]').html(),
-              'position': $('#slide-description-table td[name="curr_position"]').html(),
-              'movement': $('#slide-description-table td[name="curr_movement"]').html(),
-              'pressure': $('#slide-description-table td[name="curr_pressure"]').html(),
-              'max_wind': $('#slide-description-table td[name="curr_max_wind"]').html(),
-              'max_gust': $('#slide-description-table td[name="curr_max_gust"]').html(),
-              'R15': $('#slide-description-table td[name="curr_R15"]').html(),
-              'R25': $('#slide-description-table td[name="curr_R25"]').html()
+              'time': $('#slide-description-table td[name="curr_time"]').text(),
+              'coordinate': $('#slide-description-table td[name="curr_coordinate"]').text(),
+              'position': $('#slide-description-table td[name="curr_position"]').text(),
+              'movement': $('#slide-description-table td[name="curr_movement"]').text(),
+              'pressure': $('#slide-description-table td[name="curr_pressure"]').text(),
+              'max_wind': $('#slide-description-table td[name="curr_max_wind"]').text(),
+              'max_gust': $('#slide-description-table td[name="curr_max_gust"]').text(),
+              'R15': $('#slide-description-table td[name="curr_R15"]').text(),
+              'R25': $('#slide-description-table td[name="curr_R25"]').text()
             }
           }
         }

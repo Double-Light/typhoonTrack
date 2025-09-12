@@ -121,10 +121,6 @@ get_warning_data = function() {
 
   // 篩選早於預報時間前的警報歷史資料
   wHData = Warning_History.filter(item => item.cwb_ty_no === ty_num && moment(item.issue) <= xInitDate_OBJ.add(30, "minutes"));
-
-  // wHData = [{'issue': '2012-08-21T14:30+08:00', 'typhoon_name': 'TEMBIN', 'cwb_typhoon_name': '天秤', 'cwb_ty_no': 14, 'report_no': '1', 'type': 'SEA'}, {'issue': '2012-08-22T05:30+08:00', 'typhoon_name': 'TEMBIN', 'cwb_typhoon_name': '天秤', 'cwb_ty_no': 14, 'report_no': '6', 'type': 'LAND'}, {'issue': '2012-08-25T08:30+08:00', 'typhoon_name': 'TEMBIN', 'cwb_typhoon_name': '天秤', 'cwb_ty_no': 14, 'report_no': '31', 'type': 'SEA'}, {'issue': '2012-08-25T14:30+08:00', 'typhoon_name': 'TEMBIN', 'cwb_typhoon_name': '天秤', 'cwb_ty_no': 14, 'report_no': '33', 'type': 'END'}, {'issue': '2012-08-26T11:30+08:00', 'typhoon_name': 'TEMBIN', 'cwb_typhoon_name': '天秤', 'cwb_ty_no': 14, 'report_no': '34', 'type': 'SEA'}, {'issue': '2012-08-27T02:30+08:00', 'typhoon_name': 'TEMBIN', 'cwb_typhoon_name': '天秤', 'cwb_ty_no': 14, 'report_no': '39', 'type': 'LAND'}, {'issue': '2012-08-28T20:30+08:00', 'typhoon_name': 'TEMBIN', 'cwb_typhoon_name': '天秤', 'cwb_ty_no': 14, 'report_no': '53', 'type': 'SEA'}, {'issue': '2012-08-28T23:30+08:00', 'typhoon_name': 'TEMBIN', 'cwb_typhoon_name': '天秤', 'cwb_ty_no': 14, 'report_no': '54', 'type': 'END'}, {'issue': '2012-08-26T11:30+08:00', 'typhoon_name': 'TEMBIN', 'cwb_typhoon_name': '天秤', 'cwb_ty_no': 14, 'report_no': '34', 'type': 'SEA'}, {'issue': '2012-08-27T02:30+08:00', 'typhoon_name': 'TEMBIN', 'cwb_typhoon_name': '天秤', 'cwb_ty_no': 14, 'report_no': '39', 'type': 'LAND'}, {'issue': '2012-08-28T20:30+08:00', 'typhoon_name': 'TEMBIN', 'cwb_typhoon_name': '天秤', 'cwb_ty_no': 14, 'report_no': '53', 'type': 'SEA'}];
-  // wHData = [{'issue': '2017-07-30T11:30+08:00', 'typhoon_name': 'HAITANG', 'cwb_typhoon_name': '海棠', 'cwb_ty_no': 10, 'report_no': '7', 'type': 'LAND'}, {'issue': '2017-07-31T08:30+08:00', 'typhoon_name': 'HAITANG', 'cwb_typhoon_name': '海棠', 'cwb_ty_no': 10, 'report_no': '14', 'type': 'END'}]
-
   // console.log(wHData);
 
   if (wHData.length != 0) {
@@ -336,16 +332,12 @@ setKeypointContent = function() {
       } else {
         textClass += " warning-text-lower";
       }
-      
-      
 
       $("#keypoint-content").append('<div class="warning-text ' + textClass + '" name="' + obj['type'] + '" style="left: ' + left + 'px;"><span class="dot"></span><span>' + moment(obj['time']).format('DD日 HH:mm') + '</span><span class="dashedline"> --- </span><span>' + obj['text'] + '</span></div>');
     } else { // 無時間 --> 隱藏keypoint-content
       $("#keypoint-content").append('<div class="warning-text ' + textClass + '" name="' + obj['type'] + '" style="display: none;"><span class="dot"></span><span>' + moment(obj['time']).format('DD日 HH:mm') + '</span><span class="dashedline"> --- </span><span>' + obj['text'] + '</span></div>');
     }
   });
-
-
 }
 
 // 讀取內差點位
@@ -413,13 +405,10 @@ function getInterpolatePoint(tauTime, thisData = PData, dataKeys = Object.keys(t
         }
       }
     });
-
     break;
   }
-
   return result;
 }
-
 
 
 // 繪製 警報半徑 warning_circle (計算警報位置與半徑像素)
@@ -434,58 +423,10 @@ setWarningCircle = function() {
 
   let Azimuth = 135; // 預設移向為西北
   
-  /* --------------------------------------------------
-     * Step 1 先畫出暴風半徑 (ellipse)，並計算 Warning_Data
-     * --------------------------------------------------*/
-  /*      
-
-  for (let i = 1; i < PData.length; i++) {
-    const Pre = PData[i - 1];
-    const This = PData[i];
-    
-    const PreR15 = Math.max(get_radius(Pre.circle_of_15ms), 0);
-    const ThisR15 = Math.max(get_radius(This.circle_of_15ms), 0);
-
-    const PreR25 = Math.max(get_radius(Pre.circle_of_25ms), 0);
-    const ThisR25 = Math.max(get_radius(This.circle_of_25ms), 0);
-
-    // 計算 Azimuth (行徑方位角)
-    if (Pre.coordinate[0] !== This.coordinate[0] || Pre.coordinate[1] !== This.coordinate[1]) {
-      Azimuth = get_Azimuth(Pre.coordinate, This.coordinate);
-    }
-
-    //  ----- 掃描 Warning_Data 介於 Pre.time & This.time 之間的點 ----- 
-    Warning_Data.forEach(warning => {
-      const checked = $(`.warning-group[name='${warning.type}'] .warning-check`).prop("checked");
-      if (!checked || !warning.time) return;
-
-      const wTime = warning.time;
-      // 介於兩個 keypoint 時間內、或 (i===1 && wTime===Pre.time)
-      if (!((wTime <= This.time && wTime > Pre.time) || (i === 1 && wTime === Pre.time))) return;
-
-      // 時間內插比例 (0~1)
-      const delta = (moment(wTime) - moment(Pre.time)) / (moment(This.time) - moment(Pre.time));
-
-      // 內插 lon / lat
-      const lon = Pre.coordinate[0] + (This.coordinate[0] - Pre.coordinate[0]) * delta;
-      const lat = Pre.coordinate[1] + (This.coordinate[1] - Pre.coordinate[1]) * delta;
+  Warning_Data.forEach(warning => {
+    if (warning.time) { // 有效時間格式再繪製
+      const {time,tau, lon, lat, ax, ay, R15_x, R15_y, R25_x, R25_y} = getInterpolatePoint(warning.time, PData,["time", "tau", "lon", "lat", "ax", "ay", "R15_x", "R15_y", "R25_x", "R25_y"])
       
-      // 內插 tau
-      const tauTime = Pre.tau + (This.tau - Pre.tau) * delta;
-
-      // 內插 R15 / R25
-      const R15 = (ThisR15 !== PreR15) ? (ThisR15 <= 0 && delta < 1 ? PreR15 : PreR15 + (ThisR15 - PreR15) * delta) : PreR15;
-      const R25 = (ThisR25 !== PreR25) ? (ThisR25 <= 0 && delta < 1 ? PreR25 : PreR25 + (ThisR25 - PreR25) * delta) : PreR25
-
-
-      // 麥卡托投影
-      const ax = roundTo((lon - Map_Range[0]) * per_Lon, 2);
-      const ay = roundTo((lat - Map_Range[3]) * per_Lat, 2);
-      const R15_x = roundTo(((R15 / 110 * per_Lon) / Math.cos((lat * Math.PI) / 180)), 3);
-      const R15_y = roundTo(((R15 / 110) * per_Lon), 3);
-      const R25_x = roundTo(((R25 / 110 * per_Lon) / Math.cos((lat * Math.PI) / 180)), 3);
-      const R25_y = roundTo(((R25 / 110) * per_Lon), 3);
-
       // 將 ellipse 加入序列化字串 (之後一次寫入 DOM)
       xRadius += `
       <g class="${warning.time < xPData[0].time ? "mark-past" : "mark-fcst"}" name="${warning.type}">
@@ -497,7 +438,7 @@ setWarningCircle = function() {
       Object.assign(warning, {
         lon: roundTo(lon, 2),
         lat: roundTo(lat, 2),
-        tau:tauTime,
+        tau:tau,
         ax,
         ay,
         R15,
@@ -508,35 +449,7 @@ setWarningCircle = function() {
         R25_y,
         Azimuth: Math.round(Azimuth)
       });
-    });
-  }
-  */
-  
-  Warning_Data.forEach(warning => {
-    const {time,tau, lon, lat, ax, ay, R15_x, R15_y, R25_x, R25_y} = getInterpolatePoint(warning.time, PData,["time", "tau", "lon", "lat", "ax", "ay", "R15_x", "R15_y", "R25_x", "R25_y"])
-    
-    // 將 ellipse 加入序列化字串 (之後一次寫入 DOM)
-    xRadius += `
-    <g class="${warning.time < xPData[0].time ? "mark-past" : "mark-fcst"}" name="${warning.type}">
-      <ellipse cx="${ax}" cy="${ay}" rx="${R15_x}" ry="${R15_y}" ${warning.time < xPData[0].time ? 'style="stroke: #CACACA;"' : 'style="stroke: #FFCACA;"'}/>
-      <use x="${ax}" y="${ay}" href="${warning.time < xPData[0].time ? '#tyIcon_past_light' : '#tyIcon_fcst_light'}"></use>
-    </g>`;
-
-    // 對 Warning_Data 寫回計算結果
-    Object.assign(warning, {
-      lon: roundTo(lon, 2),
-      lat: roundTo(lat, 2),
-      tau:tau,
-      ax,
-      ay,
-      R15,
-      R25,
-      R15_x,
-      R15_y,
-      R25_x,
-      R25_y,
-      Azimuth: Math.round(Azimuth)
-    });
+    }
   });
 
   // 批次寫入 ellipse
@@ -811,44 +724,6 @@ setWarningMarks = function() {
 
   // 設定 SVG 大小位置
   change_SVG_Size()
-  
-  
-  // ---------- 組裝 div#warning-marks 片段 ----------
-  // const $slide = document.querySelector("div#slide");
-  
-  // $("#warning_marks g").each(function () {
-    // const g = $(this);
-    // const gName = g.attr("name");
-    // const gClass = g.attr("class");
-    // const rectEl = g.find("rect")[0];
-
-    // if (rectEl && $slide) {
-      // const rectBox = rectEl.getBoundingClientRect();
-      // const containerBox = $slide.getBoundingClientRect();
-
-      // const relativeX = rectBox.left - 1 - containerBox.left;
-      // const relativeY = rectBox.top - 1 - containerBox.top;
-      // const width = rectBox.width;
-      // const height = rectBox.height;
-      
-       // dMarks += `<div class="${gClass}" name="${gName}" style="left:${relativeX}px;top:${relativeY}px;width:${width}px;height:${height}px;">`
-      
-      // bestPlacement[gName]["text"].forEach(str => {
-        // dMarks += `<span>${str}</span>`
-      // });
-      
-      // dMarks += `</div>`;
-
-      // console.log(`g[name="${gName}"] 相對位置與大小：`, {
-        // x: relativeX,
-        // y: relativeY,
-        // width,
-        // height
-      // });
-    // }
-  // });
-
-  // $("div#keypoint-mark").html(dMarks);
 
   /* --------------------------------------------------
      * 工具函式區
@@ -1237,23 +1112,7 @@ function setTcAnimate (aniType="all") {
           tauTime = item.tau // 修改tauTime為 重要時間點
         }
       });
-        
-      /* for (let i = 1; i < PData.length; i++) {
-        const Pre = PData[i - 1];
-        const This = PData[i];
 
-        if (!((tauTime <= This.tau && tauTime > Pre.tau) || (i === 1 && tauTime === Pre.tau))) continue;
-        const delta = (tauTime - Pre.tau) / (This.tau - Pre.tau);
-        
-        time = moment(Pre.time) + (moment(This.time) - moment(Pre.time)) * delta
-        ax = roundTo(Pre.ax + (This.ax - Pre.ax) * delta, 2);
-        ay = roundTo(Pre.ay + (This.ay - Pre.ay) * delta, 2);
-        R15_x = roundTo(Pre.R15_x + (This.R15_x - Pre.R15_x) * delta, 3);
-        R15_y = roundTo(Pre.R15_y + (This.R15_y - Pre.R15_y) * delta, 3);
-        R25_x = roundTo(Pre.R25_x + (This.R25_x - Pre.R25_x) * delta, 3);
-        R25_y = roundTo(Pre.R25_y + (This.R25_y - Pre.R25_y) * delta, 3);
-        break; // ✅ 找到後就跳出
-      } */
       ({time, ax, ay, R15_x, R15_y, R25_x, R25_y} = getInterpolatePoint(tauTime, PData,["time", "ax", "ay", "R15_x", "R15_y", "R25_x", "R25_y"]))
       
       // $("#warning_marks .mark-fcst").hide()
@@ -1433,12 +1292,15 @@ function changeWarning($warnGroup, changeType) {
     setWarningMarks();
     setTcAnimate();
     setEditModel();
-  }
-
-  if (changeType === "changeText") {
+  } else if (changeType === "changeText") {
+    var $inputElement = $warnGroup.find(".warning-text");
+    
     // TODO: 依據 warning-text 的內容更新 Warning_Data
-    var newText = $warnGroup.find(".warning-text").text().replace(/：$/, '');
+    var newText = $warnGroup.find(".warning-text").val();
+    
     console.log("更新文字：", newText);
+    
+    $inputElement.attr('value', newText).val(newText);  // 更新文字
     
     let obj = Warning_Data.find(function(item) {
       return item.type === warnType;
@@ -1446,7 +1308,7 @@ function changeWarning($warnGroup, changeType) {
     console.log(warnType, obj);
 
     if (obj !== undefined) {
-      obj.text = newText; 
+      obj.text = newText;
       obj.source = "Self_Editing";
       
       $warnGroup.attr('source', "Self_Editing");
@@ -1463,6 +1325,8 @@ function changeWarning($warnGroup, changeType) {
     let fontSize = parseFloat($("g#warning_marks").css("font-size"))
     setWarningMarksSize(fontSize,warnType)
     
+    // 重設 warning-text 寬度
+    $(".warning-group .warning-text").css("width",(Math.max(...warning_data.map(item => item.text.replace(" ","").length)))*parseFloat($(".warning-group .warning-text").css("font-size")))
   }
 }
 
@@ -1485,30 +1349,6 @@ function decrementHour(button) {
   changeWarning($warnGroup, 'changeTime');
 }
 
-
-// 雙擊 warning-text 進入編輯模式
-$(document).on("dblclick", "#warning_estimate_list .warning-text", function () {
-  var $this = $(this);
-  var originalText = $this.text().replace(/：$/, '');
-  var $input = $("<input type='text' class='warning-text-edit'>").val(originalText);
-
-  $this.empty().append($input);
-  $input.focus();
-
-  $input.on("blur keydown", function (e) {
-    if (e.type === "blur" || e.key === "Enter") {
-      var newText = $input.val();
-      $this.text(newText + "："); // 還原冒號
-      changeWarning($this.closest(".warning-group"), 'changeText');
-      
-      // 設定 warning-text 寬度
-      $(".warning-group .warning-text").css("width",(Math.max(...warning_data.map(item => item.text.length))+1)*16)
-    }
-  });
-  
-
-});
-
 // 新增警報重要時間點
 $(function () {
   $("#btn_warningAdd").on("click", function () {
@@ -1529,10 +1369,10 @@ $(function () {
         }
         
         Warning_Data.push(item);
-        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value=""><div class="warning-text" name="${item["text"]}">${item["text"]}：</div><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'))"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
+        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value=""><input class="warning-text" value="${item["text"]}" onchange="changeWarning($(this).closest('.warning-group'), 'changeText')"><span>：</span><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'), 'changeTime')"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
         
         // 設定 warning-text 寬度
-        $(".warning-group .warning-text").css("width",(Math.max(...warning_data.map(item => item.text.replace(" ","").length))+1)*16)
+        $(".warning-group .warning-text").css("width",(Math.max(...warning_data.map(item => item.text.replace(" ","").length)))*parseFloat($(".warning-group .warning-text").css("font-size")))
         
         break;
       }
@@ -1561,32 +1401,16 @@ gen_warning = function() {
     // 設定警報時間預估(LST)選單
     Warning_Data.forEach(item => {
       if (item['source'] === 'TAFIS_Warning_History' || (moment(item['time']) < FcstTime && item['source'] != 'Self_Editing')) { // 已發布 --> 鎖定編輯
-        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><div class="warning-text" name="${item["text"]}" >${item["text"]}：</div><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'))" disabled><div class="warning-adjust-btn"><button onclick="incrementHour(this)" disabled>▲</button><button onclick="decrementHour(this)" disabled>▼</button></div></div>`);
+        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><input class="warning-text" value="${item["text"]}" onchange="changeWarning($(this).closest('.warning-group'), 'changeText')"><span>：</span><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'), 'changeTime')" disabled><div class="warning-adjust-btn"><button onclick="incrementHour(this)" disabled>▲</button><button onclick="decrementHour(this)" disabled>▼</button></div></div>`);
       } else if (item['time'] === '') { // 無時間 --> 取消勾選
-        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value=""><div class="warning-text" name="${item["text"]}">${item["text"]}：</div><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'))"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
+        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value=""><input class="warning-text" value="${item["text"]}" onchange="changeWarning($(this).closest('.warning-group'), 'changeText')"><span>：</span><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'), 'changeTime')"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
       } else {
-        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><div class="warning-text" name="${item["text"]}">${item["text"]}：</div><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'))"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
+        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><input class="warning-text" value="${item["text"]}" onchange="changeWarning($(this).closest('.warning-group'), 'changeText')"><span>：</span><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'), 'changeTime')"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
       }
     });
     
     // 設定 warning-text 寬度
-    $(".warning-group .warning-text").css("width",(Math.max(...warning_data.map(item => item.text.length))+1)*16)
-    
-    // $.each(WarningText, function(key, value) {
-      // console.log(key, value);
-      // var obj = Warning_Data.find(function(item) {
-        // return item.type === key;
-      // });
-      // if (obj !== undefined) {
-        // if (obj['source'] === 'TAFIS_Warning_History' || moment(obj['time']) < moment($("select#trackFcstList option:selected").val())) { // 已發布 --> 鎖定編輯
-          // $("#warning_estimate_list").append(`<div class="warning-group" name="${obj["type"]}" source="${obj["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><div class="warning-text" name="${obj["text"]}" >${obj["text"]}：</div><input class="warning-time" value="${obj["time"]}" onchange="changeWarning($(this).closest('.warning-group'))" disabled><div class="warning-adjust-btn"><button onclick="incrementHour(this)" disabled>▲</button><button onclick="decrementHour(this)" disabled>▼</button></div></div>`);
-        // } else if (obj['time'] === '') { // 無時間 --> 取消勾選
-          // $("#warning_estimate_list").append(`<div class="warning-group" name="${obj["type"]}" source="${obj["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value=""><div class="warning-text" name="${obj["text"]}">${obj["text"]}：</div><input class="warning-time" value="${obj["time"]}" onchange="changeWarning($(this).closest('.warning-group'))"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
-        // } else {
-          // $("#warning_estimate_list").append(`<div class="warning-group" name="${obj["type"]}" source="${obj["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><div class="warning-text" name="${obj["text"]}">${obj["text"]}：</div><input class="warning-time" value="${obj["time"]}" onchange="changeWarning($(this).closest('.warning-group'))"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
-        // }
-      // }
-    // });
+    $(".warning-group .warning-text").css("width",(Math.max(...warning_data.map(item => item.text.length)))*parseFloat($(".warning-group .warning-text").css("font-size")))
 
     // 設定重要時間點keypoint-content
     setKeypointContent()
