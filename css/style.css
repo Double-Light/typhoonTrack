@@ -13,6 +13,13 @@ body {
   max-width: 1240px;
 }
 
+#data-select {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  margin: 0 4rem;
+  justify-items: center;
+}
+
 select {
   margin: 0.25rem;
   padding: 0.25rem;
@@ -22,21 +29,21 @@ select {
   min-width: 180px;
 }
 
-#track_fcst_control {
+#slide_control {
   text-align: center;
   display: flex;
   flex-direction: row;
   margin: 1rem 0;
 }
 
-#track_fcst_control div {
+#slide_control div {
   width: 33.3%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-#track_fcst_control select {
+#slide_control select {
   min-width: 108px;
 }
 
@@ -65,44 +72,48 @@ select {
   /*  transform: translate(0px, 0px) scale(1.2); */
 }
 
-.svgObj {
+.slideObj {
   width: 720px;
   height: 405px;
   /* border: 1px solid #f40303; */
   position: relative;
 }
 
-.svgObj>svg {
+.slideObj[slide_theme_type="Card_1v1"] {
+  height: 720px;
+}
+
+.slideObj>svg {
   position: absolute;
 }
 
-#slide[ppt_theme_type="Full_Map_1"] .warning-text-History.active {
+#slideShps[slide_theme_type="Full_Map_1"] .warning-text-History.active {
   background: #c9c9c9b3;
 }
 
-#slide[ppt_theme_type="Full_Map_1"] .warning-text-Estimate.active {
+#slideShps[slide_theme_type="Full_Map_1"] .warning-text-Estimate.active {
   background: #FFC9C9B3;
 }
 
-#slide[ppt_theme_type="Right_Map_1"] .warning-text-History.active span{
+#slideShps[slide_theme_type="Right_Map_1"] .warning-text-History.active span{
   background: #ff0000b3;
   color: #FFF;
 }
 
-#slide[ppt_theme_type="Right_Map_1"] .warning-text-Estimate.active span{
+#slideShps[slide_theme_type="Right_Map_1"] .warning-text-Estimate.active span{
   background: #3d3d3db3;
   color: #FFF;
 }
 
-.dragMode #basemap {
+.dragMode #svgObj {
   cursor: grab;
 }
 
-.dragMode #slideObject {
+.dragMode #shpObjs {
   pointer-events: none;
 }
 
-.dragMode #slideObject #keypoint {
+.dragMode #shpObjs #keypoint {
   pointer-events: auto;
 }
 
@@ -124,7 +135,7 @@ select {
   display: inline;
 }
 
-.editMode #slide[ppt_theme_type="Full_Map_1"] #keypoint {
+.editMode #slideShps[slide_theme_type="Full_Map_1"] #keypoint {
   cursor: move;
 }
 
@@ -136,17 +147,17 @@ select {
   pointer-events: none;
 }
 
-.editMode #slide[ppt_theme_type="Full_Map_1"] #slide-title,
-.editMode #slide[ppt_theme_type="Full_Map_1"] #slide-description,
-.editMode #slide[ppt_theme_type="Full_Map_1"] #slide-production>div,
-.editMode #slide[ppt_theme_type="Full_Map_1"] #keypoint-content .warning-text span:nth-of-type(4) {
+.editMode #slideShps[slide_theme_type="Full_Map_1"] #slide-title,
+.editMode #slideShps[slide_theme_type="Full_Map_1"] #slide-description,
+.editMode #slideShps[slide_theme_type="Full_Map_1"] #slide-production>div,
+.editMode #slideShps[slide_theme_type="Full_Map_1"] #keypoint-content .warning-text span:nth-of-type(4) {
   cursor: pointer;
 }
 
-.editMode #slide[ppt_theme_type="Right_Map_1"] #slide-title p,
-.editMode #slide[ppt_theme_type="Right_Map_1"] #slide-description-table td[name],
-.editMode #slide[ppt_theme_type="Right_Map_1"] #slide-production>div,
-.editMode #slide[ppt_theme_type="Right_Map_1"] #keypoint-content .warning-text {
+.editMode #slideShps[slide_theme_type="Right_Map_1"] #slide-title p,
+.editMode #slideShps[slide_theme_type="Right_Map_1"] #slide-description-table td[name],
+.editMode #slideShps[slide_theme_type="Right_Map_1"] #slide-production>div,
+.editMode #slideShps[slide_theme_type="Right_Map_1"] #keypoint-content .warning-text {
   cursor: pointer;
 }
 
@@ -666,4 +677,11 @@ select {
   padding: 7px 0;
 }
 
+
+#canvasDivs {
+  display: flex;
+  position: absolute;
+  overflow: hidden;
+  top: -9999px;
+}
 
