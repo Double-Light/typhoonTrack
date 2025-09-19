@@ -697,15 +697,29 @@ setWarningMarks = function() {
     const lines = 2;
     const textHeight = lineHeight * lines;
     const textStartY = roundTo(labelY + (labelHeight - textHeight) / 2 + fontSize,2); // 修正基線位置
-    gMarks += `
-      <g class="${warning.time <= xPData[0].time ? "mark-past" : "mark-fcst"}" name="${warning.type}">
-        <line x1="${ConnX}" y1="${ConnY}" x2="${ax}" y2="${ay}" ConnectorType="${ConnectorType}" ${warning.time <= xPData[0].time ? 'style="stroke:#808080;"' : 'style="stroke:#c00000;"'}></line>
-        <rect x="${labelX}" y="${labelY}" width="${labelWidth}" height="${labelHeight}" rx="0" ${warning.time <= xPData[0].time ? 'style="stroke:#808080;fill:#fffce7;"' : 'style="stroke:#c00000;fill:#ff2f2f;"'}/>
-        <text x="${labelX + labelWidth / 2}" y="${textStartY}" text-anchor="middle"  ${warning.time <= xPData[0].time ? 'style="fill: #000;"' : 'style="fill: #FFF;"'}>
-          <tspan x="${labelX + labelWidth / 2}" dy="0">${timeStr}</tspan>
-          <tspan x="${labelX + labelWidth / 2}" dy="${lineHeight}">${warning.text}</tspan>
-        </text>
-      </g>`;
+    
+    // 底圖為"衛星影像"
+    if ($("select#map_theme_type option:selected").val() === "Satellite_Map"){
+      gMarks += `
+        <g class="${warning.time <= xPData[0].time ? "mark-past" : "mark-fcst"}" name="${warning.type}">
+          <line x1="${ConnX}" y1="${ConnY}" x2="${ax}" y2="${ay}" ConnectorType="${ConnectorType}" ${warning.time <= xPData[0].time ? 'style="stroke:#808080;"' : 'style="stroke:#FFF;"'}></line>
+          <rect x="${labelX}" y="${labelY}" width="${labelWidth}" height="${labelHeight}" rx="0" ${warning.time <= xPData[0].time ? 'style="stroke:#808080;fill:#fffce7;"' : 'style="stroke:#FFF;fill:#F119;"'}/>
+          <text x="${labelX + labelWidth / 2}" y="${textStartY}" text-anchor="middle"  ${warning.time <= xPData[0].time ? 'style="fill: #000;"' : 'style="fill: #FFF;"'}>
+            <tspan x="${labelX + labelWidth / 2}" dy="0">${timeStr}</tspan>
+            <tspan x="${labelX + labelWidth / 2}" dy="${lineHeight}">${warning.text}</tspan>
+          </text>
+        </g>`;
+    } else {
+      gMarks += `
+        <g class="${warning.time <= xPData[0].time ? "mark-past" : "mark-fcst"}" name="${warning.type}">
+          <line x1="${ConnX}" y1="${ConnY}" x2="${ax}" y2="${ay}" ConnectorType="${ConnectorType}" ${warning.time <= xPData[0].time ? 'style="stroke:#808080;"' : 'style="stroke:#c00000;"'}></line>
+          <rect x="${labelX}" y="${labelY}" width="${labelWidth}" height="${labelHeight}" rx="0" ${warning.time <= xPData[0].time ? 'style="stroke:#808080;fill:#fffce7;"' : 'style="stroke:#c00000;fill:#ff2f2f;"'}/>
+          <text x="${labelX + labelWidth / 2}" y="${textStartY}" text-anchor="middle"  ${warning.time <= xPData[0].time ? 'style="fill: #000;"' : 'style="fill: #FFF;"'}>
+            <tspan x="${labelX + labelWidth / 2}" dy="0">${timeStr}</tspan>
+            <tspan x="${labelX + labelWidth / 2}" dy="${lineHeight}">${warning.text}</tspan>
+          </text>
+        </g>`;
+    }
 
     if (angleOffset > 0) {
       Offset *= -1;

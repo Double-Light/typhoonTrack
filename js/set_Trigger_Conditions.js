@@ -343,7 +343,7 @@ async function captureSlide(mode = "clipboard") {
 
   } finally {
     // ["#baseDiv", "#animDiv", "#topDiv", "#canvasDiv"].forEach(sel => $(sel).remove());
-    // $("#canvasDivs").empty()  // 清空canvasDiv
+    $("#canvasDivs").empty()  // 清空canvasDiv
     
     $("#modalCancelBtn").show();
     $("#modalStopBtn").hide();
@@ -634,15 +634,13 @@ async function exportFile(mode, myImages, fileName, scaleFactor) {
     
     // 擷取靜態圖層
     // const baseCanvas = await makeCanvas($("#baseDiv")[0], scaleFactor)
-    const topCanvas = await makeCanvas($("#topDiv")[0], scaleFactor)
+    // const topCanvas = await makeCanvas($("#topDiv")[0], scaleFactor)
     
     // ✅ Debug: 輸出 baseCanvas base64 圖像
     // console.log(`baseCanvas:`, baseCanvas.toDataURL());
 
     // const baseImgData = baseCanvas.toDataURL("image/png");
-    const topImgData = topCanvas.toDataURL("image/png");
-    
-    console.log(topCanvas)
+    const topImgData = canvasDict["topCanvas"].toDataURL("image/png");
 
     // PPTX with PNG
     for (let img of myImages) {

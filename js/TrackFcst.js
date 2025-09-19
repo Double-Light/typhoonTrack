@@ -605,6 +605,8 @@ set_Basemap_Theme = function() {
     // 調整SVG 地圖填滿與邊界樣式
     $("#slideObj #svgObj").find("g#world, g#nearSea path, g#臺灣").css("fill","#FFF0").css("stroke","#FFF")
     $("#slideObj #svgObj").find("g#pastPath, g#fcstPath").css("stroke","#FFF")
+    $("#slideObj #svgObj").find("g#warning_marks g.mark-fcst rect").css("fill","#F119").css("stroke","#FFF")
+    $("#slideObj #svgObj").find("g#warning_marks g.mark-fcst line").css("stroke","#FFF")
     
     // $("#shpObjs").hide()
     $("#slideObj #shpObjs").find("#slide-title, #slide-description").css("background-color","rgba(255, 248, 193, .8)")
@@ -612,10 +614,14 @@ set_Basemap_Theme = function() {
     drawnTiles.clear();
     $("#slideObj #svgObj g#bottom").html('<path d="M 0 720 L 1296 720 L 1296 0 L 0 0 z"></path>')                // 還原底圖
     // $("#slideObj #svgObj").find("g#world, g#nearSea path, g#LatLonLines, g#臺灣").css("stroke-width",0.1)         // 還原邊界邊線
-    $("#slideObj #svgObj").find("g#world, g#nearSea path, g#臺灣").css("fill","#fff89e").css("stroke","#e0abab")  // 還原SVG 地圖填滿與邊界樣式
+    $("#slideObj #svgObj").find("g#world, g#臺灣").css("fill","#fff89e").css("stroke","#e0abab")  // 還原SVG 地圖填滿與邊界樣式
+    $("#slideObj #svgObj").find("g#nearSea path").css("fill","#fff0f0").css("stroke","#ff5a5a")
     $("#slideObj #svgObj").find("g#pastPath").css("stroke","#c0c0c0")
     $("#slideObj #svgObj").find("g#fcstPath").css("stroke","#4f81bd")
     // $("#slideObj #svgObj").find("g#pastPath, g#fcstPath").css("stroke-width",0.5)
+    
+    $("#slideObj #svgObj").find("g#warning_marks g.mark-fcst rect").css("fill","#ff2f2f").css("stroke","#c00000")
+    $("#slideObj #svgObj").find("g#warning_marks g.mark-fcst line").css("stroke","#c00000")
     
     // $("#shpObjs").hide()
     $("#slideObj #shpObjs").find("#slide-title, #slide-description").css("background-color","rgba(255, 248, 193, .6)")
