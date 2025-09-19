@@ -625,8 +625,8 @@ async function exportFile(mode, myImages, fileName, scaleFactor) {
   } else if (mode.startsWith("ppt")) {  // 輸出檔案類型為 PPT
     // console.log("輸出檔案類型為 PPT")
     // slide 寬高 換算成英吋
-    const widthIn = 720 / 72;
-    const heightIn = 405 / 72;
+    const widthIn = $("#slideObj").width() / 72;
+    const heightIn = $("#slideObj").height() / 72;
 
     const pptx = new PptxGenJS();
     pptx.defineLayout({ name: "custom", width: widthIn, height: heightIn });
