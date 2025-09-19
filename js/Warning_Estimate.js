@@ -276,7 +276,7 @@ get_warning_data = function() {
 setKeypointContent = function() {
   $("#keypoint-content").contents().remove();
 
-  let ppt_theme_type = $("select#ppt_theme_type option:selected").val() // 投影片樣式
+  let slide_theme_type = $("select#slide_theme_type option:selected").val() // 投影片樣式
   let FcstTime = moment($("select#trackFcstList option:selected").val()) // 預報時間
 
   // 計算時間軸起訖時間
@@ -299,7 +299,7 @@ setKeypointContent = function() {
   // let timeLine_Hours = (moment(timeLine_endTime) - moment(timeLine_startTime)) / 3600000
 
   // 建立重要時間軸(timeline) 新版簡報適用
-  if (ppt_theme_type === "Right_Map_1") {
+  if (slide_theme_type === "Right_Map_1") {
     if ((moment(FcstTime) - moment(timeLine_startTime)) > 0) {
       let width = roundTo(Math.min(1, (moment(FcstTime) - moment(timeLine_startTime)) / (moment(timeLine_endTime) - moment(timeLine_startTime))) * 270, 2);
       $("#keypoint-content").append('<hr class="timeline-History" width="' + width + 'px" style="top: 28.5px; left: 35px; position: absolute;">')
@@ -1160,49 +1160,50 @@ function setTcAnimate (aniType="all") {
 }
 
 // 繪製TcCircle
-function setTcCircle(tauTime=0 ,$svg=$("svg#basemap"), showAllMarks = false, highlight = false) {
-  $("g#tc_circle").contents().remove();
-  $("#warning_marks >g animate").remove();            // 移除所有標記顯示/隱藏動畫
-  $("#warning_marks .mark-fcst").css("opacity", "");  // 預報時段標記全顯示
-  
-  $svg.find("g#tc_circle").contents().remove();
-  let xRadius = ""
-  
-  // console.log(tauTime);
-  
-  const {time, ax, ay, R15_x, R15_y, R25_x, R25_y} = getInterpolatePoint(tauTime, PData,["time", "ax", "ay", "R15_x", "R15_y", "R25_x", "R25_y"])
-  
-  xRadius = `
-    <g id="g_tc_R15">
-      <ellipse id="tc_R15" cx="${ax}" cy="${ay}" rx="${R15_x}" ry="${R15_y}" ${tauTime>=0 ? 'stroke="#F00" fill="#FFC9C9B3"' : 'stroke="#808080" fill="#FFFCE7B3"'} stroke-width="1.0"></ellipse>
-    </g>
-    <g id="g_tc_R25">
-      <ellipse id="tc_R25" cx="${ax}" cy="${ay}" rx="${R25_x}" ry="${R25_y}" ${tauTime>=0 ? 'fill="#FF717180"' : 'fill="#f0e22480"'} stroke-width="0"></ellipse>
-    </g>
-    <g id="g_tc_center">
-      <use id="tc_center" x="${ax}" y="${ay}" href="${tauTime<0 ? '#tyIcon_past' : '#tyIcon_fcst'}"></use>
-    </g>`;
+function setTcCircle(tauTime=0 ,$svg=$("svg#svgObj"), showAllMarks = false, highlight = false) {
+  if (PData.length > 0) {
+    $("g#tc_circle").contents().remove();
+    $("#warning_marks >g animate").remove();            // 移除所有標記顯示/隱藏動畫
+    $("#warning_marks .mark-fcst").css("opacity", "");  // 預報時段標記全顯示
     
-  $svg.find("g#tc_circle").html(xRadius)
-  
-  // 標記顯示/隱藏
-  if (showAllMarks) { // 標記全顯示
-    $svg.find("#warning_marks g").show()
-  } else { // 只顯示 Warning tau < tauTime
-    $svg.find("#warning_marks .mark-fcst").hide()
-    $svg.parent().find("#keypoint .warning-text").removeClass("active")
-    Warning_Data.forEach(item => {
-      if (item.tau <= tauTime && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
-        $svg.find(`#warning_marks g[name='${item.type}']`).show()
-        if (item.tau === tauTime && highlight) {
-          $svg.parent().find(`#keypoint .warning-text[name='${item.type}']`).addClass("active")
-          // $svg.parent().find(`#keypoint .warning-text[name='${item.type}']`).css("background","#FFC9C9B3")
-          // console.log(item.type, "highlight")
+    $svg.find("g#tc_circle").contents().remove();
+    let xRadius = ""
+    
+    // console.log(tauTime);
+    
+    const {time, ax, ay, R15_x, R15_y, R25_x, R25_y} = getInterpolatePoint(tauTime, PData,["time", "ax", "ay", "R15_x", "R15_y", "R25_x", "R25_y"])
+    
+    xRadius = `
+      <g id="g_tc_R15">
+        <ellipse id="tc_R15" cx="${ax}" cy="${ay}" rx="${R15_x}" ry="${R15_y}" ${tauTime>=0 ? 'stroke="#F00" fill="#FFC9C9B3"' : 'stroke="#808080" fill="#FFFCE7B3"'} stroke-width="1.0"></ellipse>
+      </g>
+      <g id="g_tc_R25">
+        <ellipse id="tc_R25" cx="${ax}" cy="${ay}" rx="${R25_x}" ry="${R25_y}" ${tauTime>=0 ? 'fill="#FF717180"' : 'fill="#f0e22480"'} stroke-width="0"></ellipse>
+      </g>
+      <g id="g_tc_center">
+        <use id="tc_center" x="${ax}" y="${ay}" href="${tauTime<0 ? '#tyIcon_past' : '#tyIcon_fcst'}"></use>
+      </g>`;
+      
+    $svg.find("g#tc_circle").html(xRadius)
+    
+    // 標記顯示/隱藏
+    if (showAllMarks) { // 標記全顯示
+      $svg.find("#warning_marks g").show()
+    } else { // 只顯示 Warning tau < tauTime
+      $svg.find("#warning_marks .mark-fcst").hide()
+      $svg.parent().find("#keypoint .warning-text").removeClass("active")
+      Warning_Data.forEach(item => {
+        if (item.tau <= tauTime && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
+          $svg.find(`#warning_marks g[name='${item.type}']`).show()
+          if (item.tau === tauTime && highlight) {
+            $svg.parent().find(`#keypoint .warning-text[name='${item.type}']`).addClass("active")
+            // $svg.parent().find(`#keypoint .warning-text[name='${item.type}']`).css("background","#FFC9C9B3")
+            // console.log(item.type, "highlight")
+          }
         }
-      }
-    });
+      });
+    }
   }
-
 }
 
 
@@ -1428,7 +1429,7 @@ gen_warning = function() {
     setWarningMarks()
 
     // 設定 keypoint 拖動
-    // const enable = $("#slide").hasClass("editable")
+    // const enable = $("#slideShps").hasClass("editable")
     // console.log(enable)
     // setEditModel(enable)
 

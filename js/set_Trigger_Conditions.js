@@ -46,7 +46,7 @@ setTriggerConditions = function() {
       $btn.attr("title", "地圖拖曳縮放模式");
       $("#TrackFcst").addClass("dragMode");
       $("#TrackFcst").removeClass("editMode");
-      $("#slideObject").appendTo(svg)
+      $("#shpObjs").appendTo(svg)
     }
 
     setEditModel()   // 設定編輯模式
@@ -69,31 +69,43 @@ setTriggerConditions = function() {
   const $control = $("#editor-panel");
   const $overlay = $("#Modal");
 
-  const baseWidth = $("#svgObj").innerWidth();
-  const baseHeight = $("#svgObj").innerHeight();
-
   function resizeSlide() {
-    if (!document.fullscreenElement) {
-      $("#svgObj").css("transform", "scale(1)");
-      $zoom.css("border", "");
-      $("#svgObj").removeClass("fullscreen")
-      $control.removeClass("show");
+    const $slide = $("#slideObj");
+    const baseWidth = $slide.innerWidth();
+    const baseHeight = $slide.innerHeight();
 
-      $("#svgObj")[0].removeEventListener('mousemove', showCtrlPanel, false);
+    if (!document.fullscreenElement) {
+      $slide.css({
+        "transform": "scale(1)",
+        "margin": "0 auto",
+        "background": ""
+      });
+      $zoom.css("border", "");
+      $slide.removeClass("fullscreen");
+      $control.removeClass("show");
+      $slide[0].removeEventListener("mousemove", showCtrlPanel, false);
     } else {
       const screenWidth = window.innerWidth;
       const screenHeight = window.innerHeight;
 
+      // 計算等比例縮放
       const scale = Math.min(screenWidth / baseWidth, screenHeight / baseHeight);
-      $("#svgObj").css("transform", `scale(${scale})`);
-      $zoom.css("border", "none");
-      $("#svgObj").addClass("fullscreen");
 
-      $("#svgObj")[0].addEventListener('mousemove', showCtrlPanel, false);
+      $slide.css({
+        "transform": `scale(${scale})`,
+        "transform-origin": "center center",
+        "margin": "auto",
+        "background": "black"   // 黑底
+      });
+
+      $zoom.css("border", "none");
+      $slide.addClass("fullscreen");
+      $slide[0].addEventListener("mousemove", showCtrlPanel, false);
     }
 
     setDragRange();
   }
+
 
   // 滑鼠移至螢幕下緣時顯示控制面板
   function showCtrlPanel(e) {
@@ -122,7 +134,7 @@ setTriggerConditions = function() {
       $("#btn_edit").attr("type", "svg-drag-zoom");
       $("#TrackFcst").addClass("dragMode");
       $("#TrackFcst").removeClass("editMode");
-      $("#slideObject").appendTo(svg)
+      $("#shpObjs").appendTo(svg)
       setEditModel();  // 設定編輯模式
     } else {
       if (document.exitFullscreen) document.exitFullscreen();
@@ -147,7 +159,7 @@ setTriggerConditions = function() {
       // resizeSlide();
     } else {
       $overlay.appendTo($("body"));
-      $("#svgObj").css("transform", "scale(1)");
+      $("#slideObj").css("transform", "scale(1)");
       $zoom.css("border", "");
     }
   });
@@ -227,7 +239,9 @@ setTriggerConditions = function() {
 
 // === 全域設定 ===
 let segments = [];
+let canvasDict = [];
 let myImages = [];
+
 
 // === 主程式 ===
 async function captureSlide(mode = "clipboard") {
@@ -236,8 +250,8 @@ async function captureSlide(mode = "clipboard") {
 
   $("#editor-panel").hide();
 
-  if ($("#svgObj").length === 0) {
-    alert("未找到 #svgObj，無法截圖！");
+  if ($("#slideObj").length === 0) {
+    alert("未找到 #slideObj，無法截圖！");
     return;
   }
   
@@ -287,10 +301,12 @@ async function captureSlide(mode = "clipboard") {
   // === Step B: 影像處理 ===
   try {
     myImages = await handleImage(mode,layerType,scaleFactor);
+    console.log("[captureSlide] 影像處理完成，myImages數量:", myImages.length);
   } catch (err) {
     console.error("[captureSlide] 截圖錯誤：", err);
     // alert("截圖發生錯誤！詳細請見 console log。");
-    ["#baseDiv", "#animDiv", "#topDiv", "#canvasDiv"].forEach(sel => $(sel).remove());
+    // ["#baseDiv", "#animDiv", "#topDiv", "#canvasDiv"].forEach(sel => $(sel).remove());
+    $("#canvasDivs").empty()  // 清空canvasDiv
     
     // 錯誤回報
     $("#progressContent").addClass("wrong");
@@ -326,7 +342,8 @@ async function captureSlide(mode = "clipboard") {
     $("#progressText").text("檔案輸出錯誤！詳情請見log");
 
   } finally {
-    ["#baseDiv", "#animDiv", "#topDiv", "#canvasDiv"].forEach(sel => $(sel).remove());
+    // ["#baseDiv", "#animDiv", "#topDiv", "#canvasDiv"].forEach(sel => $(sel).remove());
+    // $("#canvasDivs").empty()  // 清空canvasDiv
     
     $("#modalCancelBtn").show();
     $("#modalStopBtn").hide();
@@ -358,7 +375,7 @@ function buildSegments(mode) {
       if ($("#btn_animsEnable").prop("checked")) {
         return [Math.min(aniParas.tauRange[0] + (svg.getCurrentTime() / aniParas.dur) % 1 * (aniParas.tauRange[1] + aniParas.pauseSec * perHr - aniParas.tauRange[0]), aniParas.tauRange[1])];  // 動畫模式當下時間點
       } else {
-        return [parseInt($("#svgObj").find("#tc_circle").attr("tau")) || 0];  // 靜態模式時間點
+        return [parseInt($("#slideObj").find("#tc_circle").attr("tau")) || 0];  // 靜態模式時間點
       }
     } else if (mode.includes("split")) { // 回傳分段時間點
       let segs = warning_data.filter(item => item.tau >= 0).map(item => item.tau);
@@ -373,42 +390,54 @@ function buildSegments(mode) {
 // === Step B: 影像處理 ===
 async function handleImage(mode,layerType,scaleFactor){
   let myImages = []
+  
+  $("#canvasDivs").css("width",$("#slideObj").width()).css("height",$("#slideObj").height())
 
   // console.log(`開始影像處理:`, mode,layerType,scaleFactor);
-  if (layerType === "SingleLayer") {   
-    const $canvasDiv = await makeCanvasDiv("canvasDiv",$("#basemap"),"foreignObject, animate",$("#slide"))
+  
+  // Step 1: 建立 Canvas Div
+  if (layerType === "SingleLayer") {
+    if ($("select#map_theme_type option:selected").val() === "Satellite_Map"){
+      const $bottomDiv = await makeCanvasDiv_Bottom()
+      const $canvasDiv = await makeCanvasDiv("canvasDiv",$("#slideObj #svgObj"),"g#bottom, foreignObject, animate",$("#slideShps"))
+    } else {
+      const $canvasDiv = await makeCanvasDiv("canvasDiv",$("#slideObj #svgObj"),"foreignObject, animate",$("#slideShps"))
+    }
   } else if (layerType === "ThreeLayer") {  // 將截圖區分為三層：底圖層（baseLayer）、動畫層（animLayer）、 標題層（topLayer
     // 1. 底圖層（baseLayer）：為SVG內不變動的部分。複製 svg 並移除變動部分、foreignObject與animate
-    if (!mode.includes("ppt")) {
-      const $baseDiv = await makeCanvasDiv("baseDiv",$("#basemap"),"g#warning_marks .mark-fcst, g#tc_circle, foreignObject, animate")
-    }
-    
-    // 2. 動畫層（animLayer）：僅保留SVG內會變動的部分(只留下 #warning_marks .mark-fcst 與  #tc_circle)
-    if (mode.includes("ppt")) {
-      const $animDiv = await makeCanvasDiv("animDiv",$("#basemap"),"foreignObject, animate") // 只移除 foreignObject 與 animate
+    if ($("select#map_theme_type option:selected").val() === "Satellite_Map"){
+      const $bottomDiv = await makeCanvasDiv_Bottom()
+      const $baseDiv = await makeCanvasDiv("baseDiv",$("#slideObj #svgObj"),"g#bottom, g#warning_marks .mark-fcst, g#tc_circle, foreignObject, animate")
     } else {
-      const $animDiv = await makeCanvasDiv("animDiv",$("#basemap"),"defs style, defs>g:not(#tyIcon_past,#tyIcon_fcst), >g:not(#warning_range), g#warning_circle,g#warning_marks .mark-past, foreignObject, animate")
+      const $baseDiv = await makeCanvasDiv("baseDiv",$("#slideObj #svgObj"),"g#warning_marks .mark-fcst, g#tc_circle, foreignObject, animate")
     }
+
+    // 2. 動畫層（animLayer）：僅保留SVG內會變動的部分(只留下 #warning_marks .mark-fcst 與  #tc_circle)
+    const $animDiv = await makeCanvasDiv("animDiv",$("#slideObj #svgObj"),"defs style, defs>g:not(#tyIcon_past,#tyIcon_fcst), >g:not(#warning_range), g#warning_circle,g#warning_marks .mark-past, foreignObject, animate")
     
     // 3. 標題層（topLayer） ：擷取 SVG foreignObject 內的 #silde（HTML文字區）
-    const $topDiv = await makeCanvasDiv("topDiv",$("#svgObj #slide"))
+    const $topDiv = await makeCanvasDiv("topDiv",$("#slideObj #slideShps"))
   }
+  
+  // 擷取各層靜態圖層(動態圖層先存為 null)
+  canvasDict = await makeCanvasDict(["animCanvas"], scaleFactor)
 
   // Step 2: 建立影像陣列 (myImages)
-  // 2.1 GIF ==> 逐幀處理動畫層（animLayer） → 合併三層並存入 canvasList ，再建立 GIF myImages
+  // 2.1 GIF ==> 逐幀處理動畫層（animLayer） → 合併三層並存入 frameList ，再建立 GIF myImages
   if (mode.includes("gif")) {
-    let canvasList = [];   // canvasList
+    let frameList = [];   // frameList => GIF 每幀 canvas 截圖
 
     const totalDuration = (mode === "gif-capture" ? (aniParas.dur - pauseSec) : (xPData[xPData.length-1].tau - xPData[0].tau)/perHr) || 12; // 動畫總秒數
     const fps = 8;
     const totalFrames = totalDuration * fps;
     
     // 擷取靜態圖層
-    let baseCanvas= null
-    if (!mode.includes("ppt")) {
-      baseCanvas = await makeCanvas($("#baseDiv")[0], scaleFactor)
-    }
-    const topCanvas = await makeCanvas($("#topDiv")[0], scaleFactor)
+    // let baseCanvas= null
+    // if (!mode.includes("ppt")) {
+      // baseCanvas = await makeCanvas($("#baseDiv")[0], scaleFactor)
+    // }
+    // const topCanvas = await makeCanvas($("#topDiv")[0], scaleFactor)
+
     
     // ✅ Debug: 輸出 baseCanvas base64 圖像
     // console.log(`baseCanvas:`, baseCanvas.toDataURL());
@@ -422,25 +451,13 @@ async function handleImage(mode,layerType,scaleFactor){
       await setTcCircle(thisTau, $("#animDiv>svg"));
       await new Promise(requestAnimationFrame);
 
-      // 擷取 anim 層
-      const animCanvas = await makeCanvas($("#animDiv")[0], scaleFactor)
+      // 擷取 anim 層，並更新canvasDict
+      canvasDict["animCanvas"] = await makeCanvas($("#animDiv")[0], scaleFactor);
       
-      if (mode.includes("ppt")) {
-        canvasList.push({ tau: thisTau, canvas: animCanvas });
-      } else {
-        // 合併三層
-        const mergedCanvas = document.createElement("canvas");
-        mergedCanvas.width = baseCanvas.width;
-        mergedCanvas.height = baseCanvas.height;
-        const ctx = mergedCanvas.getContext("2d", { willReadFrequently: true });
-        ctx.clearRect(0, 0, baseCanvas.width, baseCanvas.height); // 先清空背景
-        ctx.drawImage(baseCanvas, 0, 0);
-        ctx.drawImage(animCanvas, 0, 0);
-        ctx.drawImage(topCanvas, 0, 0);
-
-        // 先存起來，不立即加到 gif
-        canvasList.push({ tau: thisTau, canvas: mergedCanvas });
-      }
+      // 合併圖層
+      const mergedCanvas = await makeMergedCanvas(canvasDict,mode.includes("ppt") ? ["topCanvas"] : [])  // 投影片不合併標題層
+      frameList.push({ tau: thisTau, canvas: mergedCanvas });    
+      
       
       // ⏳ 更新進度條
       const percent = Math.round((frame / totalFrames/2) * 100);
@@ -450,18 +467,23 @@ async function handleImage(mode,layerType,scaleFactor){
     }
     
     // 使用：segments = [[tauStart1, tauEnd1], [tauStart2, tauEnd2], ...]
-    // console.log("canvasList:",canvasList.length)
-    myImages = await buildGifsBySegments(canvasList, segments, fps, pauseSec);
+    // console.log("frameList:",frameList.length)
+    myImages = await buildGifsBySegments(frameList, segments, fps, pauseSec);
     
+    // ppt + gif ==> 第一頁加上tau=0全景圖
     if (mode.startsWith("ppt")){
       const tau = 0
       await setTcCircle(tau, $(`#animDiv>svg`), true, false);
       await new Promise(requestAnimationFrame); // 不等畫面顯示
       
-      // 擷取 anim 層
-      const canvas = await makeCanvas($("#animDiv")[0], scaleFactor)
-      const blob = await canvasToBlob(canvas);
-      myImages = [{ tau, blob, dataUrl: canvas.toDataURL("image/png") }, ...myImages]
+      // 擷取 anim 層，並更新canvasDict
+      canvasDict["animCanvas"] = await makeCanvas($("#animDiv")[0], scaleFactor);
+      
+      // 合併圖層
+      const mergedCanvas = await makeMergedCanvas(canvasDict,mode.includes("ppt") ? ["topCanvas"] : [])  // 投影片不合併標題層
+      
+      const blob = await canvasToBlob(mergedCanvas);
+      myImages = [{ tau, blob, dataUrl: mergedCanvas.toDataURL("image/png") }, ...myImages]
     }
     
   // 2.2 非GIF ==> 依照 segments 建立 myImages
@@ -472,18 +494,28 @@ async function handleImage(mode,layerType,scaleFactor){
       if (cancelProgress) break;
       
       if (mode.startsWith("ppt")){
-        canvasDivName = "animDiv"
+        canvasDivId = "animDiv"
       } else {
-        canvasDivName = "canvasDiv"
+        canvasDivId = "canvasDiv"
       }
 
       if (!["clipboard", "png-capture"].includes(mode) || $("#btn_animsEnable").prop("checked")) {  // 靜態模式擷取當下畫面不用執行 setTcCircle
-        await setTcCircle(tau, $(`#${canvasDivName}>svg`), tau === 0, tau !== 0);
+        await setTcCircle(tau, $(`#${canvasDivId}>svg`), tau === 0, tau !== 0);
         await new Promise(requestAnimationFrame); // 不等畫面顯示
       }
-      const canvas = await makeCanvas($(`#${canvasDivName}`)[0], scaleFactor);
-      const blob = await canvasToBlob(canvas);
-      myImages.push({ tau, blob, dataUrl: canvas.toDataURL("image/png") });
+
+      // const canvas = await makeCanvas($(`#${canvasDivId}`)[0], scaleFactor);
+      // const blob = await canvasToBlob(canvas);
+      // myImages.push({ tau, blob, dataUrl: canvas.toDataURL("image/png") });
+      
+      // 擷取 anim 層，並更新canvasDict
+      canvasDict[canvasDivId.replace("canvasDiv", "canvas").replace(/Div$/, "Canvas")] = await makeCanvas($(`#${canvasDivId}`)[0], scaleFactor);
+      
+      // 合併圖層
+      const mergedCanvas = await makeMergedCanvas(canvasDict,mode.includes("ppt") ? ["topCanvas"] : [])  // 投影片不合併標題層
+      
+      const blob = await canvasToBlob(mergedCanvas);
+      myImages.push({ tau, blob, dataUrl: mergedCanvas.toDataURL("image/png") });
       
       // ⏳ 更新進度條
       const percent = Math.round((s/segments.length) * 100);
@@ -492,20 +524,19 @@ async function handleImage(mode,layerType,scaleFactor){
       $("#progressBar").css("width", `${percent}%`);
     }
   }
-  console.log("myImages數量:", myImages.length)
+  // console.log("myImages數量:", myImages.length)
   // console.log(myImages[0].dataUrl)
   
   return myImages
 }
 
 // === GIF Builder: 回傳 { segment, blob, dataUrl } ===
-async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
+async function buildGifsBySegments(frameList, segments, fps, pauseSec) {
   const gifs = [];
   const numerators = segments.map(segment => segment[1]-segment[0]+1) // 各段 tau 數量
   const denominator = eval(numerators.join('+'))                      // tau數量總和     => 作為進度分母
   let multiplys = new Array(segments.length).fill(0);                 // 進度*該段tau數量 => 作為進度分子
-  
-  
+
   $("#progressText").text("正在轉成GIF...");
 
   for (let i = 0; i < segments.length; i++) {
@@ -513,14 +544,14 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
     const gif = new GIF({
       workers: 2,
       quality: 1,
-      width: canvasList[0].canvas.width,
-      height: canvasList[0].canvas.height,
+      width: frameList[0].canvas.width,
+      height: frameList[0].canvas.height,
       workerScript: "./js/gif.worker.js"
       // transparent: "#fff0"  // 透明色
     });
     
     // 先篩選出需要的 frames
-    const segmentFrames = canvasList.filter(frame => frame.tau >= startTau && frame.tau <= endTau);
+    const segmentFrames = frameList.filter(frame => frame.tau >= startTau && frame.tau <= endTau);
 
     segmentFrames.forEach((frame, idx) => {
       const isLast = idx === segmentFrames.length - 1;
@@ -532,9 +563,10 @@ async function buildGifsBySegments(canvasList, segments, fps, pauseSec) {
     gifs.push(new Promise((resolve) => {
       gif.on("progress", (p) => {
         // ⏳ 更新進度條
-        multiplys[i] = p*numerators[i] // 單張GIF進度(0~1) * 該段 tau 數量
+        // multiplys[i] = p*numerators[i] // 單張GIF進度(0~1) * 該段 tau 數量
+        multiplys[i] += 1
         const percent = Math.min(Math.round((1/2 + eval(multiplys.join('+'))/denominator/2) * 100),99);
-        console.log(i,p.toFixed(2),multiplys.map(num => num.toFixed(2)),percent)
+        // console.log([i, p.toFixed(2), "['" + multiplys.join("','") + "']", percent].join("\t"))
         $("#progressText").text(`正在轉成GIF... (${percent}%)`);
         $("#progressBar").css("width", `${percent}%`);
       });
@@ -582,11 +614,11 @@ async function exportFile(mode, myImages, fileName, scaleFactor) {
     
   } else if (mode.startsWith("pdf")) {
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF("landscape", "pt", [$("#svgObj").width(), $("#svgObj").height()]);
+    const pdf = new jsPDF("landscape", "pt", [$("#slideObj").width(), $("#slideObj").height()]);
     for (let i = 0; i < myImages.length; i++) {
       if (cancelProgress) break;
       if (i > 0) pdf.addPage();
-      pdf.addImage(myImages[i].dataUrl, "PNG", 0, 0, $("#svgObj").width(), $("#svgObj").height());
+      pdf.addImage(myImages[i].dataUrl, "PNG", 0, 0, $("#slideObj").width(), $("#slideObj").height());
     }
     await pdf.save(`${fileName}.pdf`);
     
@@ -625,7 +657,7 @@ async function exportFile(mode, myImages, fileName, scaleFactor) {
 
 // === 工具函式 ===
 function exportAsSvg(fileName = `${$("#slide-title").html()}路徑預測示意圖_${moment($("select#trackFcstList option:selected").val()).format("DD日HH時")}`) {
-  const svgEl = document.querySelector("svg#basemap");
+  const svgEl = document.querySelector("svg#svgObj");
   const clonedSvg = svgEl.cloneNode(true);
   // optional: 將不必要的元素隱藏/刪除
 
@@ -640,24 +672,26 @@ function exportAsSvg(fileName = `${$("#slide-title").html()}路徑預測示意�
   URL.revokeObjectURL(link.href);
 }
 
-async function makeCanvasDiv(divName, target, rmChild = "", target2 = null) {
+// 建立用於截圖的區塊(CanvasDiv)
+async function makeCanvasDiv(canvasDivId, target, rmChild = "", target2 = null) {
   let $targetClone = target.clone();
   $targetClone.find(rmChild).remove();  // 移除 rmChild 物件
 
-  const $canvasDiv = $(`<div id='${divName}'>`).css({
+  const $canvasDiv = $(`<div id='${canvasDivId}'>`).css({
     display: "flex",
     position: "absolute",
-    top: "-9999px",
-    width: $("#svgObj").width(),
-    height: $("#svgObj").height()
+    overflow: "hidden",
+    width: $("#slideObj").width(),
+    height: $("#slideObj").height()
   }).append($targetClone);
   
   if (target2 != null) {$canvasDiv.append(target2.clone())}
 
-  $("body").append($canvasDiv);
+  $("#canvasDivs").append($canvasDiv);
   return $canvasDiv
 }
 
+// 建立截圖Canvas
 async function makeCanvas(el, scaleFactor) {
   return html2canvas(el, {
     backgroundColor: null,
@@ -667,6 +701,69 @@ async function makeCanvas(el, scaleFactor) {
     logging: false
   });
 }
+
+// 建立截圖 canvasDict
+async function makeCanvasDict(exceptions = [], scaleFactor = 1) { // exceptions = ["animCanvas"]
+  const canvasDict = {};
+
+  // 轉成 Array 處理比較直覺
+  const divs = $("#canvasDivs > div[id]").toArray();
+
+  for (const div of divs) {
+    const $div = $(div);
+    const divId = $div.attr("id");
+
+    // 把 Div 名稱轉成 Canvas 名稱
+    const canvasKey = divId.replace("canvasDiv", "canvas").replace(/Div$/, "Canvas");
+
+    // 例外條件： Canvas:null
+    if (exceptions.includes(canvasKey)) {
+      canvasDict[canvasKey] = null;
+      continue;
+    }
+
+    // 將 div 轉為 canvas
+    try {
+      const canvas = await makeCanvas($div[0], scaleFactor);
+      canvasDict[canvasKey] = canvas;
+    } catch (err) {
+      console.error(`轉換 ${divId} 失敗:`, err);
+      canvasDict[canvasKey] = null;
+    }
+  }
+
+  return canvasDict;
+}
+
+async function makeMergedCanvas(canvasDict,exceptions = []) {  // canvasDict = ["baseCanvas":baseCanvas,"animCanvas":animCanvas,"topCanvas":topCanvas]
+  if (!canvasDict || Object.keys(canvasDict).length === 0) return null;
+
+  // 取第一個 canvas 作為基準大小
+  const firstKey = Object.keys(canvasDict)[0];
+  const baseCanvas = canvasDict[firstKey];
+
+  const mergedCanvas = document.createElement("canvas");
+  mergedCanvas.width = baseCanvas.width;
+  mergedCanvas.height = baseCanvas.height;
+
+  const ctx = mergedCanvas.getContext("2d", { willReadFrequently: true });
+  ctx.clearRect(0, 0, mergedCanvas.width, mergedCanvas.height);
+
+  // 照 key 出現順序繪製
+  for (const key of Object.keys(canvasDict)) {
+    if (exceptions.includes(key)) continue;  // 例外條件：跳過
+    
+    const c = canvasDict[key];
+    if (c) ctx.drawImage(c, 0, 0);
+  }
+
+  return mergedCanvas;
+}
+
+
+
+
+
 
 async function canvasToBlob(canvas) {
   return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
@@ -699,6 +796,57 @@ async function downloadZip(images, fileName, ext) {
 }
 
 
+// 將衛星影像圖移出SVG
+function makeCanvasDiv_Bottom() {
+  const $gBottom = $("#slideObj #svgObj g#bottom");
+  const $canvasDiv = $("<div id='bottomDiv'>").css({
+    display: "flex",
+    position: "absolute",
+    overflow: "hidden",
+    width: $("#slideObj").width(),
+    height: $("#slideObj").height(),
+  })
+  
+  // 取出 viewBox & 實際顯示大小
+  const viewBox = $("#slideObj #svgObj")[0].viewBox.baseVal;
+  const minX = viewBox.x, minY = viewBox.y;
+  const vbW = viewBox.width, vbH = viewBox.height;
+  const svgW = $("#slideObj #svgObj")[0].clientWidth, svgH = $("#slideObj #svgObj")[0].clientHeight;
+  
+  // 轉換 g#bottom 裡的每一個 <image>，並插入 #bottomDiv
+  $gBottom.find("image").each(function () {
+    const $tile = $(this);
+    const img = $("<img>");
+    img.attr("src", $tile.attr("href") || $tile.attr("xlink:href"));
+
+    const x = parseFloat($tile.attr("x"));
+    const y = parseFloat($tile.attr("y"));
+    const w = parseFloat($tile.attr("width"));
+    const h = parseFloat($tile.attr("height"));
+
+    // SVG → CSS pixel
+    const cssX = (x - minX) * (svgW / vbW);
+    const cssY = (y - minY) * (svgH / vbH);
+    const cssW = w * (svgW / vbW);
+    const cssH = h * (svgH / vbH);
+
+    img.css({
+      position: "absolute",
+      left: cssX + "px",
+      top: cssY + "px",
+      width: cssW + "px",
+      height: cssH + "px"
+    });
+
+    $canvasDiv.append(img);
+  });
+  
+  $("#canvasDivs").append($canvasDiv);
+  return $canvasDiv
+}
+
+
+
 // ---------------------------------------------------------------------------------------------------------------
 
 // 設定區塊拖曳範圍 (編輯模式改變、視窗大小變化、全螢幕切換時觸發)  PS:不含enableMarkDrag()，因為無限制拖曳範圍
@@ -713,10 +861,10 @@ function setDragRange() {
   if (enable) {
     // --- keypoint 區塊拖曳範圍 ---
     const pointRange = [
-      $("#slide").offset().left + 5,
-      $("#slide").offset().top + 55,
-      $("#slide").offset().left + 715 - $("#keypoint").outerWidth(),
-      $("#slide").offset().top + 325 - $("#keypoint").outerHeight()
+      $("#slideShps").offset().left + 5,
+      $("#slideShps").offset().top + 55,
+      $("#slideShps").offset().left + 715 - $("#keypoint").outerWidth(),
+      $("#slideShps").offset().top + 325 - $("#keypoint").outerHeight()
     ];
     $("#keypoint").draggable({ containment: pointRange });
     
@@ -725,10 +873,10 @@ function setDragRange() {
     
     // div#keypoint-mark>div 可拖曳   
     // const markRange = [
-      // $("#slide").position().left + 5,
-      // $("#slide").position().top + 55,
-      // $("#slide").position().left + 715 - $("#keypoint-mark div").width(),
-      // $("#slide").position().top + 325 - $("#keypoint-mark div").height()
+      // $("#slideShps").position().left + 5,
+      // $("#slideShps").position().top + 55,
+      // $("#slideShps").position().left + 715 - $("#keypoint-mark div").width(),
+      // $("#slideShps").position().top + 325 - $("#keypoint-mark div").height()
     // ];
     // $("#keypoint-mark div").draggable({ containment: markRange });
   } 
@@ -787,17 +935,17 @@ function enableTextEdit(enable = true) {
   $("textarea.slide-textarea").remove();           // 移除殘留的 textarea
 
   /* ---------- 依投影片版型決定可編輯元素 ---------- */
-  const ppt_theme_type = $("select#ppt_theme_type option:selected").val();
+  const slide_theme_type = $("select#slide_theme_type option:selected").val();
   let editableSelectors = [];
 
-  if (ppt_theme_type === "Full_Map_1") {
+  if (slide_theme_type === "Full_Map_1") {
     editableSelectors = [
       "#slide-title",
       "#slide-description",
       "#slide-production>div",
       "#keypoint-content .warning-text span:nth-of-type(4)"
     ];
-  } else if (ppt_theme_type === "Right_Map_1") {
+  } else if (slide_theme_type === "Right_Map_1") {
     editableSelectors = [
       "#slide-title p",
       "#slide-description-table td[name]",
@@ -850,7 +998,7 @@ function enableTextEdit(enable = true) {
     });
     
     // warning-text 轉換
-    if (ppt_theme_type === "Right_Map_1") {
+    if (slide_theme_type === "Right_Map_1") {
       $('#keypoint-content div.warning-text').off("dblclick.textEdit").on("dblclick.textEdit", function () {
         const $el = $(this);
         $el.addClass("editable")
@@ -886,7 +1034,7 @@ let currentTransform = { x: 0, y: 0 };
 
 // 啟用/停用mark移動功能
 function enableMarkDrag(enable = true) {
-  // const svg = document.querySelector("svg#basemap");
+  // const svg = document.querySelector("svg#svgObj");
   const $marks = $("#warning_marks g");
 
   let dragging = null;
@@ -1116,12 +1264,12 @@ drag = function(e) {
     let newWidth = startViewBox[2];
     let newHeight = startViewBox[3];
 
-    let ppt_theme_type = $("select#ppt_theme_type option:selected").val() // 投影片樣式
+    let slide_theme_type = $("select#slide_theme_type option:selected").val() // 投影片樣式
 
     // 邊界檢查
-    if (ppt_theme_type === "Full_Map_1") {
+    if (slide_theme_type === "Full_Map_1") {
       if (newX < 0) newX = 0;
-    } else if (ppt_theme_type === "Right_Map_1") {
+    } else if (slide_theme_type === "Right_Map_1") {
       if (newX < -newWidth / 2) newX = -newWidth / 2;
     }
     if (newY < 0) newY = 0;
@@ -1198,8 +1346,8 @@ zoom = function(e) {
     r = 1;
   }
   // 3.2 進行縮放並檢查大小(長寬不可超過原始地圖大小)
-  let oldWidth = parseInt($('#basemap').attr('width'), 10)
-  let oldHeight = parseInt($('#basemap').attr('height'), 10)
+  let oldWidth = parseInt($('#svgObj').attr('width'), 10)
+  let oldHeight = parseInt($('#svgObj').attr('height'), 10)
   // console.log(oldWidth,oldHeight);
 
   // 寬度較大 --> 高度易超出範圍(先調整高度)
@@ -1257,10 +1405,10 @@ zoom = function(e) {
   let newLeft = middleViewBox[0] + delta.dx;
   let newTop = middleViewBox[1] + delta.dy;
   
-  let ppt_theme_type = $("select#ppt_theme_type option:selected").val() // 投影片樣式
+  let slide_theme_type = $("select#slide_theme_type option:selected").val() // 投影片樣式
 
   // 6.3 位置檢查 (超出邊框則改為靠邊對齊)
-  if (newLeft < 0 && ppt_theme_type != "Right_Map_1") {
+  if (newLeft < 0 && slide_theme_type != "Right_Map_1") {
     newLeft = 0;
     // console.log('靠左對齊');
   } else if (newLeft + middleViewBox[2] > Map_Size[0]) {
@@ -1287,7 +1435,135 @@ zoom = function(e) {
   showViewBox();
 }
 
-// 顯示當前的 經緯度範圍(Domain_Range) 資訊
+// ---------------------------------------------------------------------------------------------------------------
+
+// 選擇 zoom (越大越清楚，但需要更多 tile)
+function chooseZoom(widthPx, heightPx, west, east, south, north) {
+  // console.log(widthPx, heightPx, west, east, south, north)
+  let bestZoom = 3;
+  for (let z = 5; z <= 20; z++) { // 擴大到更大 zoom
+    const x1 = lon2tile(west, z);
+    const x2 = lon2tile(east, z);
+    const y1 = lat2tile(north, z);
+    const y2 = lat2tile(south, z);
+
+    const tilesX = x2 - x1 + 1;
+    const tilesY = y2 - y1 + 1;
+
+    if (tilesX * 256 >= widthPx && tilesY * 256 >= heightPx) {
+      // console.log(z, tilesX, tilesY)
+      if (tilesX <= 16 && tilesY <= 9) {
+        bestZoom = z; // 每次都更新，最後會取最大符合的 zoom
+      } else {
+        break    // 超出數量即停止
+      }
+    }
+  }
+  return bestZoom;
+}
+
+
+// 已繪製的 tile 集合
+let drawnTiles = new Set();
+let drawZoom = null 
+
+function drawGoogleTiles(Domain_Range) {
+  const bottom = document.querySelector("g#myMap g#bottom");
+  // bottom.innerHTML = "";
+
+  const west  = Domain_Range[0][0];
+  const east  = Domain_Range[0][1];
+  const south = Domain_Range[1][0];
+  const north = Domain_Range[1][1];
+
+  const vb = $("#slideObj #svgObj")[0].viewBox.baseVal;
+  const vbWidth  = vb.width;
+  const vbHeight = vb.height;
+
+  // 選擇 zoom
+  const zoom = chooseZoom(vbWidth, vbHeight, west, east, south, north);
+  // console.log("zoom:", zoom);
+  
+  // zoom 改變 ==> 清空 drawnTiles
+  if (zoom != drawZoom) {
+    // console.log("清空 drawnTiles")
+    drawZoom = zoom;
+    drawnTiles.clear();
+    bottom.innerHTML = "";
+  }
+
+  const x1 = lon2tile(west, zoom);
+  const x2 = lon2tile(east, zoom);
+  const y1 = lat2tile(north, zoom);
+  const y2 = lat2tile(south, zoom);
+
+  const yTop = Math.min(y1, y2);
+  const yBottom = Math.max(y1, y2);
+
+  for (let x = x1; x <= x2; x++) {
+    for (let y = yTop; y <= yBottom; y++) {
+      const key = `${zoom}_${x}_${y}`;
+      if (drawnTiles.has(key)) continue; // 已經抓過就跳過
+      drawnTiles.add(key);
+      
+      // console.log(key);
+
+      const url = `https://khms3.google.com/kh/v=1000&x=${x}&y=${y}&z=${zoom}`;
+
+      const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+      img.setAttribute("href", url);
+
+      const tileLeftLon   = x / Math.pow(2, zoom) * 360 - 180;
+      const tileRightLon  = (x+1) / Math.pow(2, zoom) * 360 - 180;
+      const tileTopLat    = tile2lat(y, zoom);
+      const tileBottomLat = tile2lat(y + 1, zoom);
+      // const tileTopLat    = 180 - (y) / Math.pow(2, zoom) * 360;
+      // const tileBottomLat = 180 - (y+1) / Math.pow(2, zoom) * 360;
+      
+      // console.log(key, tileLeftLon,tileRightLon,tileTopLat,tileBottomLat)
+
+      const svgX = (tileLeftLon - west) / (east - west) * vbWidth + vb.x;
+      const svgY = (north - tileTopLat) / (north - south) * vbHeight + vb.y;
+      const svgW = (tileRightLon - tileLeftLon) / (east - west) * vbWidth;
+      const svgH = (tileTopLat - tileBottomLat) / (north - south) * vbHeight;
+
+      img.setAttribute("x", svgX.toFixed(6));
+      img.setAttribute("y", svgY.toFixed(6));
+      img.setAttribute("width", (svgW*1.01).toFixed(6));   // 略為加大，消除白縫
+      img.setAttribute("height", (svgH*1.01).toFixed(6));  // 略為加大，消除白縫
+      
+      // 允許非等比縮放，填滿格子
+      img.setAttribute("preserveAspectRatio", "none");
+      
+      // 確保來源支援 CORS
+      img.setAttribute("crossorigin", "anonymous");
+
+      bottom.appendChild(img);
+    }
+  }
+}
+
+
+// tile → lat
+function tile2lat(y, zoom) {
+  const n = Math.PI - 2 * Math.PI * y / Math.pow(2, zoom);
+  return (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+}
+
+// lon → tile
+function lon2tile(lon, zoom) {
+  return Math.floor((lon + 180) / 360 * Math.pow(2, zoom));
+}
+
+// lat → tile
+function lat2tile(lat, zoom) {
+  const rad = lat * Math.PI / 180;
+  return Math.floor((1 - Math.log(Math.tan(rad) + 1/Math.cos(rad)) / Math.PI) / 2 * Math.pow(2, zoom));
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+
+// 顯示當前的 經緯度範圍(Domain_Range) 資訊  +  重新拼貼衛星影像圖
 showViewBox = function() {
   Domain_LTWH = svg
     .getAttribute('viewBox')
@@ -1313,12 +1589,42 @@ showViewBox = function() {
 
   currentViewBox = document.getElementById('showDomainRange')
   
-  let ppt_theme_type = $("select#ppt_theme_type option:selected").val() // 投影片樣式
+  let slide_theme_type = $("select#slide_theme_type option:selected").val() // 投影片樣式
 
   // currentViewBox.textContent = `現在的 viewBox 範圍為：(${Domain_LTWH})`
   currentViewBox.setAttribute('per_LonLat', per_LonLat.toString().replaceAll(",", " "))
   currentViewBox.setAttribute('Domain_Range', Domain_Range.toString().replaceAll(",", " "))
-  currentViewBox.textContent = `經緯度範圍： ${parseFloat(Domain_Range[1][0]).toFixed(2)}N ~ ${parseFloat(Domain_Range[1][1]).toFixed(2)}N ; ${parseFloat(ppt_theme_type === "Right_Map_1" ? Domain_Range[0][0] + (Domain_Range[0][1]-Domain_Range[0][0])/2 : Domain_Range[0][0]).toFixed(2)}E ~ ${parseFloat(Domain_Range[0][1]).toFixed(2)}E`
+  currentViewBox.textContent = `經緯度範圍： ${parseFloat(Domain_Range[1][0]).toFixed(2)}N ~ ${parseFloat(Domain_Range[1][1]).toFixed(2)}N ; ${parseFloat(slide_theme_type === "Right_Map_1" ? Domain_Range[0][0] + (Domain_Range[0][1]-Domain_Range[0][0])/2 : Domain_Range[0][0]).toFixed(2)}E ~ ${parseFloat(Domain_Range[0][1]).toFixed(2)}E`
+  
+
+  // 依zoom調整邊界、線段大小
+  const west  = Domain_Range[0][0];
+  const east  = Domain_Range[0][1];
+  const south = Domain_Range[1][0];
+  const north = Domain_Range[1][1];
+
+  const vb = $("#slideObj #svgObj")[0].viewBox.baseVal;
+  const vbWidth  = vb.width;
+  const vbHeight = vb.height;
+
+  // 選擇 zoom
+  const zoom = chooseZoom(vbWidth, vbHeight, west, east, south, north);
+  // console.log("zoom:", zoom);
+  
+  // zoom 改變 ==> 調整邊界、線段大小
+  if (zoom != drawZoom) {
+    $("#slideObj #svgObj").find("g#world, g#nearSea path, g#LatLonLines").css("stroke-width",4/Math.pow(2, zoom-3).toFixed(3))
+    $("#slideObj #svgObj").find("g#臺灣").css("stroke-width",4/Math.pow(2, zoom-2).toFixed(3))
+    $("#slideObj #svgObj").find("g#pastPath, g#fcstPath").css("stroke-width",4/Math.pow(2, zoom-4).toFixed(3))
+  }
+  
+  // 底圖為"衛星影像" ==> 重新拼貼衛星影像圖 (加 debounce)
+  if ($("select#map_theme_type option:selected").val() === "Satellite_Map"){
+    if (window.tileTimer) clearTimeout(window.tileTimer);
+    window.tileTimer = setTimeout(() => {
+      drawGoogleTiles(Domain_Range);  // 傳入當前經緯度範圍
+    }, 200);
+  }
 }
 
 // ---------------------------------------------------------------------------------------------------------------
