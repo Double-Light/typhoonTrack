@@ -1670,7 +1670,7 @@ function drawGoogleTiles(Domain_Range) {
       drawnTiles.add(key);
 
       // 嘗試先使用本地瓦片
-      const localUrl = `./data/khms3/${zoom}/${x}_${y}.jpg`;
+      const localUrl = `../data/khms3/${zoom}/${x}_${y}.jpg`;
       const remoteUrl = `https://khms3.google.com/kh/v=1000&x=${x}&y=${y}&z=${zoom}`;
 
       // 檢查本地瓦片是否存在
@@ -1712,8 +1712,6 @@ function checkImageExists(url) {
     img.src = url;
   });
 }
-
-
 
 // tile → lat
 function tile2lat(y, zoom) {
