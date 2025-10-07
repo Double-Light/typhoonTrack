@@ -14,10 +14,10 @@ body {
 }
 
 #data-select {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  margin: 0 4rem;
-  justify-items: center;
+    display: grid;
+    grid-template-columns: 0.5fr 1fr 1fr;
+    /* margin: 0 4rem; */
+    /* justify-items: center; */
 }
 
 select {
@@ -27,6 +27,10 @@ select {
 
 #TyList {
   min-width: 180px;
+}
+
+#TyList option:disabled{
+  display:none;
 }
 
 #slide_control {
@@ -76,6 +80,12 @@ select {
   width: 720px;
   height: 405px;
   /* border: 1px solid #f40303; */
+  display: inline-block;
+  /* 透明方格 */
+  background-color: #fff;
+  background-image: linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%), linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
   position: relative;
 }
 
@@ -685,3 +695,38 @@ select {
   top: -9999px;
 }
 
+
+#toggleDisplay ul {
+  list-style: none;
+  font-size: 12px;
+  padding-left: 1em;
+}
+
+#toggleDisplay ul ul {
+  padding-left: 1.5em;
+}
+
+#toggleDisplay label {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* 隱藏所有 name 屬性存在，且值不是 "Simple_Map" 的 label */
+#toggleDisplay>ul[map_theme_type="Simple_Map"] label[name]:not([name="Simple_Map"]) {
+  display: none;
+}
+
+/* 隱藏所有 name 屬性存在，且值不是 "Satellite_Map" 的 label */
+#toggleDisplay>ul[map_theme_type="Satellite_Map"] label[name]:not([name="Satellite_Map"]) {
+  display: none;
+}
+
+
+
+#toggleDisplay input[type="checkbox"] {
+  margin-right: 0.3em;
+}
+
+#toggleDisplay input[type="checkbox"]:indeterminate {
+  background-color: #ccc;
+}

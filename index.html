@@ -239,20 +239,25 @@
       $('select#slide_theme_type').on('change', function() {
         // 設定投影片Div
         setSlideTheme()
-        change_SVG_Size()
+        // change_SVG_Size()
 
         // 設定重要時間點keypoint-content
         setKeypointContent()
         
         // 設定編輯模式
         setEditModel()
+        
+        setDragRange()
       });
       
       // 底圖類型變更
       $('select#map_theme_type').on('change', function() {
-        change_SVG_Size()
+        // change_SVG_Size()
+        showViewBox()
         
         set_Basemap_Theme()
+
+        initToggleDisplays()
       });
       
 
@@ -265,11 +270,11 @@
         // 颱風資料
         myData['tc_info'] = {
           'year': $("select#year").val(),
-          'cwb_td_no': $("select#TyList option:selected").attr("tdnum"),
+          'cwb_td_no': $("select#TyList option:selected:not([disabled])").attr("tdnum"),
           'init_time': $("select#trackFcstList option:selected").val() ? moment($("select#trackFcstList option:selected").val()).format("yyyy-MM-DD HH:mm") : null,
-          'cwb_ty_no': $("select#TyList option:selected").attr("tynumname").slice(6, 8),
-          'typhoon_name': $("select#TyList option:selected").attr("tyname"),
-          'cwb_typhoon_name': $("select#TyList option:selected").attr("tychname")
+          'cwb_ty_no': $("select#TyList option:selected:not([disabled])").attr("tynumname").slice(6, 8),
+          'typhoon_name': $("select#TyList option:selected:not([disabled])").attr("tyname"),
+          'cwb_typhoon_name': $("select#TyList option:selected:not([disabled])").attr("tychname")
         }
 
         // 路徑資料

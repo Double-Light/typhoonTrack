@@ -38,16 +38,26 @@ setTriggerConditions = function() {
       $("#TrackFcst").addClass("editMode");
       $("#TrackFcst").removeClass("dragMode");
       
+      // 關閉動畫
+      // $("#btn_animsEnable").prop("checked",false) // 關閉動畫
+      // setTcAnimate()
+      // toggleAnimEnable()
+      
       // 移動到 <svg> 最後一層（即 foreignObject 上層）
-      $("g#warning_range").appendTo(svg);
+      $("#slideObj g#warning_range").appendTo(svg);
     } else {                                 // 返回地圖拖曳
       console.log("切換成地圖拖曳縮放模式");
       $btn.attr("type", "svg-drag-zoom");
       $btn.attr("title", "地圖拖曳縮放模式");
       $("#TrackFcst").addClass("dragMode");
       $("#TrackFcst").removeClass("editMode");
-      $("#shpObjs").appendTo(svg)
+      $("#slideObj g#tc_circle").appendTo(svg);
+      $("#slideObj #shpObjs").appendTo(svg)
     }
+    
+    // 重設 重要時間點暴風圈 顯示/隱藏
+    $("g#warning_circle>g ellipse").css("display","")
+    $("#toggleDisplay input[name='g#warning_circle>g ellipse']").prop("checked", $("g#warning_circle>g ellipse").is(":visible"))
 
     setEditModel()   // 設定編輯模式
     setDragRange()   // 設定區塊拖曳範圍
@@ -135,13 +145,36 @@ setTriggerConditions = function() {
       $("#TrackFcst").addClass("dragMode");
       $("#TrackFcst").removeClass("editMode");
       $("#shpObjs").appendTo(svg)
-      setEditModel();  // 設定編輯模式
+      
+      // 如果 為編輯模式，則關閉編輯模式
+      if ($("#btn_edit").attr("type") === 'shape-edit'){
+        console.log("切換成地圖拖曳縮放模式");
+        $btn.attr("type", "svg-drag-zoom");
+        $btn.attr("title", "地圖拖曳縮放模式");
+        $("#TrackFcst").addClass("dragMode");
+        $("#TrackFcst").removeClass("editMode");
+        $("#slideObj g#tc_circle").appendTo(svg);
+        $("#slideObj #shpObjs").appendTo(svg)
+        
+        // 關閉動畫
+        // $("#btn_animsEnable").prop("checked",false) // 關閉動畫
+        // setTcAnimate()
+        // toggleAnimEnable()
+        
+        setEditModel();  // 設定編輯模式
+        setDragRange()   // 設定區塊拖曳範圍
+      }
+      
     } else {
       if (document.exitFullscreen) document.exitFullscreen();
       else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
       else if (document.msExitFullscreen) document.msExitFullscreen();
       $overlay.appendTo($("body"));
     }
+    
+    // 重設 重要時間點暴風圈 顯示/隱藏
+    $("g#warning_circle>g ellipse").css("display","")
+    $("#toggleDisplay input[name='g#warning_circle>g ellipse']").prop("checked", $("g#warning_circle>g ellipse").is(":visible"))
     // setDragRange()   // 設定區塊拖曳範圍
   });
   
@@ -228,11 +261,78 @@ setTriggerConditions = function() {
     $("#modalDoneBtn").prop("disabled", false);
   });
 
-  // . 啟用區段動畫
-  // $("#keypoint-content .warning-text-Estimate").on("click", function () {
-    // console.log($(this).attr("name"))
-    // setTcAnimate($(this).attr("name"))
-  // });
+  // 顯示/隱藏按鈕
+  const toggleGroups = {
+    "myMap": {
+      "g#bottom": {"Simple_Map":"白色底圖","Satellite_Map":"衛星影像"},
+      "g#world": {"Simple_Map":"國家區塊","Satellite_Map":"國界"},
+      "g#臺灣": "臺灣縣市",
+      "g#nearSea": "臺灣近海",
+      "g#LatLonLines": "經緯線"
+    },
+    "tc_Track": {
+      "g#tc_path g#pastPath": "過去路徑",
+      "g#tc_path g#fcstPath": "預報路徑",
+      "g#tc_point": "預報定位"
+    },
+    "warning_range": {
+      "g#warning_circle>g ellipse": "重要時間點暴風圈",
+      "g#warning_circle>g use": "重要時間點定位",
+      "g#warning_marks>g": "重要時間點標記"
+    },
+    "tc_circle": {
+      "g#g_tc_R15": "七級風範圍",
+      "g#g_tc_R25": "十級風範圍",
+      "g#g_tc_center": "颱風中心",
+      "g#g_tc_timestr": "時間戳"
+    },
+    "slideShps": {
+      "div#slide-title": "標題",
+      "div#slide-description": "描述",
+      "div#slide-production": "製作資訊",
+      "div#keypoint": "重要時間點列表",
+    }
+  };
+  
+  const toggleGroupInfo = {"myMap":"地圖資訊", "tc_Track":"颱風路徑", "warning_range":"警報資訊", "tc_circle":"颱風動態", "slideShps":"投影片物件"}
+  
+  const $td = $("#toggleDisplay");
+  const $ul = $(`<ul map_theme_type="${$("select#map_theme_type option:selected").val()}">`).appendTo($td);
+  
+  $ul.css("margin-top", "-5rem")
+
+  for (const [groupName, children] of Object.entries(toggleGroups)) {
+    const $groupLi = $("<li>");
+    const $groupCheckbox = $(`<input type="checkbox" id="group-${groupName}" name="${groupName}" onclick="toggleGroup('${groupName}')">`).appendTo($groupLi);
+    $groupLi.append(`<label for="group-${groupName}">${toggleGroupInfo[groupName]}</label>`);
+
+    const $childUl = $("<ul>").appendTo($groupLi);
+
+    for (const [selector, Obj] of Object.entries(children)) {
+      const $childLi = $("<li>");
+      const safeName = `child-${groupName}`;
+      const $childCheckbox = $(`<input type="checkbox" class="${safeName}" name="${selector}" onclick="toggleChild('${selector}','${groupName}')">`).appendTo($childLi);
+      
+      if (typeof Obj === 'object'){
+        for (const [name, text] of Object.entries(Obj)) {
+          // console.log(name,text);
+          $childLi.append(`<label name='${name}'>${text}</label>`);
+        }
+      } else if (typeof Obj === 'string'){
+        $childLi.append(`<label>${Obj}</label>`);
+      }
+      
+      $childUl.append($childLi);
+    }
+
+    $ul.append($groupLi);
+
+    // 群組 checkbox onclick
+    // $groupCheckbox.on("click", () => toggleGroup(groupName));
+  }
+
+  // 初始化核取方塊狀態
+  initToggleDisplays();
 };
 
 // === 下載功能 ===
@@ -344,6 +444,7 @@ async function captureSlide(mode = "clipboard") {
   } finally {
     // ["#baseDiv", "#animDiv", "#topDiv", "#canvasDiv"].forEach(sel => $(sel).remove());
     $("#canvasDivs").empty()  // 清空canvasDiv
+    canvasDict = [];
     
     $("#modalCancelBtn").show();
     $("#modalStopBtn").hide();
@@ -419,6 +520,9 @@ async function handleImage(mode,layerType,scaleFactor){
     const $topDiv = await makeCanvasDiv("topDiv",$("#slideObj #slideShps"))
   }
   
+  // 調整 #slideShps位置設定
+  $("#canvasDivs #slideShps").css("position","absolute")
+  
   // 擷取各層靜態圖層(動態圖層先存為 null)
   canvasDict = await makeCanvasDict(["animCanvas"], scaleFactor)
 
@@ -473,7 +577,7 @@ async function handleImage(mode,layerType,scaleFactor){
     // ppt + gif ==> 第一頁加上tau=0全景圖
     if (mode.startsWith("ppt")){
       const tau = 0
-      await setTcCircle(tau, $(`#animDiv>svg`), true, false);
+      await setTcCircle(tau, $("#animDiv>svg"), true, false);
       await new Promise(requestAnimationFrame); // 不等畫面顯示
       
       // 擷取 anim 層，並更新canvasDict
@@ -596,8 +700,14 @@ async function exportFile(mode, myImages, fileName, scaleFactor) {
   $("#progressText").text("檔案輸出中...");
 
   if (mode === "clipboard") {
-    await navigator.clipboard.write([new ClipboardItem({ "image/png": myImages[0].blob })]);
-    alert("已複製畫面到剪貼簿！");
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": myImages[0].blob })
+      ]);
+      alert("已複製到剪貼簿！");
+    } catch (err) {
+      console.error("複製失敗：", err);
+    }
   } else if (mode.startsWith("png")) {  
     if (myImages.length === 1) {  // 單一 PNG
       downloadBlob(myImages[0].blob, `${fileName}.png`);
@@ -647,17 +757,51 @@ async function exportFile(mode, myImages, fileName, scaleFactor) {
       const slide = pptx.addSlide();
       // slide.addImage({ data: baseImgData, x: 0, y: 0, w: "100%", h: "100%" });
       slide.addImage({ data: img.dataUrl, x: 0, y: 0, w: "100%", h: "100%" });
-      slide.addImage({ data: topImgData,  x: 0, y: 0, w: "100%", h: "100%" });
+      if (topImgData) slide.addImage({ data: topImgData,  x: 0, y: 0, w: "100%", h: "100%" });
     }
     await pptx.writeFile({ fileName: `${fileName}.pptx` });
   }
 }
+
+// 需要判斷是否隱藏的元素
+const toggleDisplaysSelectors = [
+  "g#myMap g#bottom",
+  "g#myMap g#nearSea",
+  "g#myMap g#world",
+  "g#myMap g#臺灣",
+  "g#myMap g#taiwan_range",
+  "g#myMap g#LatLonLines",
+  "g#warning_range g#warning_circle>g ellipse",
+  "g#warning_range g#warning_circle>g use",
+  "g#warning_range g#warning_marks>g",
+  "g#tc_Track g#tc_path>g",
+  "g#tc_Track g#tc_point>use",
+  "g#tc_circle g#g_tc_R15",
+  "g#tc_circle g#g_tc_R25",
+  "g#tc_circle g#g_tc_center",
+  "g#tc_circle g#g_tc_timestr",
+  "div#slideShps #slide-background",
+  "div#slideShps #slide-title",
+  "div#slideShps #slide-description",
+  "div#slideShps #slide-production",
+  "div#slideShps #keypoint",
+  "div#slideShps #keypoint-mark"
+];
 
 // === 工具函式 ===
 function exportAsSvg(fileName = `${$("#slide-title").html()}路徑預測示意圖_${moment($("select#trackFcstList option:selected").val()).format("DD日HH時")}`) {
   const svgEl = document.querySelector("svg#svgObj");
   const clonedSvg = svgEl.cloneNode(true);
   // optional: 將不必要的元素隱藏/刪除
+
+  // 移除隱藏元素
+  toggleDisplaysSelectors.forEach(sel => {
+    const originalEl = $("#slideObj #svgObj").find(sel);
+    if (originalEl && $(originalEl).is(":hidden")) {
+      const clonedEl = clonedSvg.querySelector(sel);
+      if (clonedEl) clonedEl.remove();
+    }
+  });
 
   const serializer = new XMLSerializer();
   const svgStr = serializer.serializeToString(clonedSvg);
@@ -672,7 +816,8 @@ function exportAsSvg(fileName = `${$("#slide-title").html()}路徑預測示意�
 
 // 建立用於截圖的區塊(CanvasDiv)
 async function makeCanvasDiv(canvasDivId, target, rmChild = "", target2 = null) {
-  let $targetClone = target.clone();
+  // 轉成 DOM 元素再 clone（false → 不要複製事件）
+  let $targetClone = $(target[0].cloneNode(true));
   $targetClone.find(rmChild).remove();  // 移除 rmChild 物件
 
   const $canvasDiv = $(`<div id='${canvasDivId}'>`).css({
@@ -682,8 +827,21 @@ async function makeCanvasDiv(canvasDivId, target, rmChild = "", target2 = null) 
     width: $("#slideObj").width(),
     height: $("#slideObj").height()
   }).append($targetClone);
-  
+
   if (target2 != null) {$canvasDiv.append(target2.clone())}
+  
+  // 移除隱藏元素
+  // $canvasDiv = $("#canvasDiv")
+  toggleDisplaysSelectors.forEach(sel => {
+    const originalEl = $("#slideObj #svgObj").find(sel);
+    if (originalEl && $(originalEl).is(":hidden")) {
+      const clonedEl = $canvasDiv.find(sel);
+      if (clonedEl) {
+        console.log("刪除",sel)
+        clonedEl.remove();
+      }
+    }
+  });
 
   $("#canvasDivs").append($canvasDiv);
   return $canvasDiv
@@ -759,10 +917,6 @@ async function makeMergedCanvas(canvasDict,exceptions = []) {  // canvasDict = [
 }
 
 
-
-
-
-
 async function canvasToBlob(canvas) {
   return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
 }
@@ -797,6 +951,9 @@ async function downloadZip(images, fileName, ext) {
 // 將衛星影像圖移出SVG
 function makeCanvasDiv_Bottom() {
   const $gBottom = $("#slideObj #svgObj g#bottom");
+  
+  if ($gBottom && $gBottom.is(":hidden")) return null
+  
   const $canvasDiv = $("<div id='bottomDiv'>").css({
     display: "flex",
     position: "absolute",
@@ -844,39 +1001,42 @@ function makeCanvasDiv_Bottom() {
 }
 
 
-
 // ---------------------------------------------------------------------------------------------------------------
 
 // 設定區塊拖曳範圍 (編輯模式改變、視窗大小變化、全螢幕切換時觸發)  PS:不含enableMarkDrag()，因為無限制拖曳範圍
 function setDragRange() {
-  const enable = $("#TrackFcst").hasClass("editMode")
   // console.log("call setDragRange()")
   
+  const enable = $("#TrackFcst").hasClass("editMode")
+  const $shp = $("#slideShps");
+  const $kp  = $("#keypoint");
+  
   // 關閉區塊拖曳拖曳
-  if ($("#keypoint").data("ui-draggable")){$("#keypoint").draggable("destroy");} // 關閉 keypoint 拖曳
-  // if ($("#keypoint-mark div").data("ui-draggable")){$("#keypoint-mark div").draggable("destroy");} // 關閉 div#keypoint-mark>div 拖曳
+  if ($kp.data("ui-draggable")){$kp.draggable("destroy");} // 關閉 keypoint 拖曳
   
   if (enable) {
+    const slideShpsIsHidden = $shp.is(":hidden")
+    const keypointIsHidden = $kp.is(":hidden")
+    
+    if (slideShpsIsHidden) $shp.show()
+    if (keypointIsHidden) $kp.show()
+    
     // --- keypoint 區塊拖曳範圍 ---
+    const shpOffset = $shp.offset(); // 相對於 document 左上角的位置
     const pointRange = [
-      $("#slideShps").offset().left + 5,
-      $("#slideShps").offset().top + 55,
-      $("#slideShps").offset().left + 715 - $("#keypoint").outerWidth(),
-      $("#slideShps").offset().top + 325 - $("#keypoint").outerHeight()
+      shpOffset.left + 5,
+      shpOffset.top + 55,
+      shpOffset.left + $shp.outerWidth()  - 5 - $kp.outerWidth(),
+      shpOffset.top  + $shp.outerHeight() - 80 - $kp.outerHeight()
     ];
-    $("#keypoint").draggable({ containment: pointRange });
+
+    $kp.draggable({
+      containment: pointRange
+    });
     
-    // console.log("#keypoint draggable")
-    
-    
-    // div#keypoint-mark>div 可拖曳   
-    // const markRange = [
-      // $("#slideShps").position().left + 5,
-      // $("#slideShps").position().top + 55,
-      // $("#slideShps").position().left + 715 - $("#keypoint-mark div").width(),
-      // $("#slideShps").position().top + 325 - $("#keypoint-mark div").height()
-    // ];
-    // $("#keypoint-mark div").draggable({ containment: markRange });
+    if (slideShpsIsHidden) $shp.hide()
+    if (keypointIsHidden) $kp.hide()
+
   } 
 }
 
@@ -895,16 +1055,23 @@ function setEditModel() {
     enableTextEdit(true);       // slide div 啟用雙擊編輯
     enableMarkDrag(true);       // g#warning_marks>g 可拖曳
     
-    if ($("#btn_animsEnable").prop("checked")){
-      $("#btn_animsEnable").prop("checked",false) // 關閉動畫
-      setTcAnimate()
-      toggleAnimEnable()
-    }
+    // if ($("#btn_animsEnable").prop("checked")){
+      // $("#btn_animsEnable").prop("checked",false) // 關閉動畫
+      // setTcAnimate()
+      // toggleAnimEnable()
+    // }
+    
   } else {       // 拖曳/縮放模式
     /* ===== 離開編輯模式 ===== */
     enableMapDragZoom();        // 恢復地圖拖曳/縮放
     enableTextEdit(false);      // slide div 停用雙擊編輯
     enableMarkDrag(false);      // 關閉 g#warning_marks>g 拖曳
+    
+    // if (!$("#btn_animsEnable").prop("checked")){
+      // $("#btn_animsEnable").prop("checked",true) // 啟動動畫
+      // setTcAnimate()
+      // toggleAnimEnable()
+    // }
     
     // 啟用區段動畫
     $("#keypoint-content .warning-text, #warning_circle g").on("click", function () {
@@ -1265,10 +1432,10 @@ drag = function(e) {
     let slide_theme_type = $("select#slide_theme_type option:selected").val() // 投影片樣式
 
     // 邊界檢查
-    if (slide_theme_type === "Full_Map_1") {
-      if (newX < 0) newX = 0;
-    } else if (slide_theme_type === "Right_Map_1") {
+    if (slide_theme_type === "Right_Map_1") {
       if (newX < -newWidth / 2) newX = -newWidth / 2;
+    } else {
+      if (newX < 0) newX = 0;
     }
     if (newY < 0) newY = 0;
     if (newX + newWidth > Map_Size[0]) newX = Map_Size[0] - newWidth;
@@ -1463,11 +1630,11 @@ function chooseZoom(widthPx, heightPx, west, east, south, north) {
 
 // 已繪製的 tile 集合
 let drawnTiles = new Set();
-let drawZoom = null 
+let drawZoom = null ;
 
 function drawGoogleTiles(Domain_Range) {
   const bottom = document.querySelector("g#myMap g#bottom");
-  // bottom.innerHTML = "";
+  if (!bottom) return;
 
   const west  = Domain_Range[0][0];
   const east  = Domain_Range[0][1];
@@ -1480,11 +1647,9 @@ function drawGoogleTiles(Domain_Range) {
 
   // 選擇 zoom
   const zoom = chooseZoom(vbWidth, vbHeight, west, east, south, north);
-  // console.log("zoom:", zoom);
-  
+
   // zoom 改變 ==> 清空 drawnTiles
   if (zoom != drawZoom) {
-    // console.log("清空 drawnTiles")
     drawZoom = zoom;
     drawnTiles.clear();
     bottom.innerHTML = "";
@@ -1501,45 +1666,53 @@ function drawGoogleTiles(Domain_Range) {
   for (let x = x1; x <= x2; x++) {
     for (let y = yTop; y <= yBottom; y++) {
       const key = `${zoom}_${x}_${y}`;
-      if (drawnTiles.has(key)) continue; // 已經抓過就跳過
+      if (drawnTiles.has(key)) continue;
       drawnTiles.add(key);
-      
-      // console.log(key);
 
-      const url = `https://khms3.google.com/kh/v=1000&x=${x}&y=${y}&z=${zoom}`;
+      // 嘗試先使用本地瓦片
+      const localUrl = `./data/khms3/${zoom}/${x}_${y}.jpg`;
+      const remoteUrl = `https://khms3.google.com/kh/v=1000&x=${x}&y=${y}&z=${zoom}`;
 
-      const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
-      img.setAttribute("href", url);
+      // 檢查本地瓦片是否存在
+      checkImageExists(localUrl).then(exists => {
+        const url = exists ? localUrl : remoteUrl;
 
-      const tileLeftLon   = x / Math.pow(2, zoom) * 360 - 180;
-      const tileRightLon  = (x+1) / Math.pow(2, zoom) * 360 - 180;
-      const tileTopLat    = tile2lat(y, zoom);
-      const tileBottomLat = tile2lat(y + 1, zoom);
-      // const tileTopLat    = 180 - (y) / Math.pow(2, zoom) * 360;
-      // const tileBottomLat = 180 - (y+1) / Math.pow(2, zoom) * 360;
-      
-      // console.log(key, tileLeftLon,tileRightLon,tileTopLat,tileBottomLat)
+        const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+        img.setAttribute("href", url);
 
-      const svgX = (tileLeftLon - west) / (east - west) * vbWidth + vb.x;
-      const svgY = (north - tileTopLat) / (north - south) * vbHeight + vb.y;
-      const svgW = (tileRightLon - tileLeftLon) / (east - west) * vbWidth;
-      const svgH = (tileTopLat - tileBottomLat) / (north - south) * vbHeight;
+        const tileLeftLon   = x / Math.pow(2, zoom) * 360 - 180;
+        const tileRightLon  = (x+1) / Math.pow(2, zoom) * 360 - 180;
+        const tileTopLat    = tile2lat(y, zoom);
+        const tileBottomLat = tile2lat(y + 1, zoom);
 
-      img.setAttribute("x", svgX.toFixed(6));
-      img.setAttribute("y", svgY.toFixed(6));
-      img.setAttribute("width", (svgW*1.01).toFixed(6));   // 略為加大，消除白縫
-      img.setAttribute("height", (svgH*1.01).toFixed(6));  // 略為加大，消除白縫
-      
-      // 允許非等比縮放，填滿格子
-      img.setAttribute("preserveAspectRatio", "none");
-      
-      // 確保來源支援 CORS
-      img.setAttribute("crossorigin", "anonymous");
+        const svgX = (tileLeftLon - west) / (east - west) * vbWidth + vb.x;
+        const svgY = (north - tileTopLat) / (north - south) * vbHeight + vb.y;
+        const svgW = (tileRightLon - tileLeftLon) / (east - west) * vbWidth;
+        const svgH = (tileTopLat - tileBottomLat) / (north - south) * vbHeight;
 
-      bottom.appendChild(img);
+        img.setAttribute("x", svgX.toFixed(6));
+        img.setAttribute("y", svgY.toFixed(6));
+        img.setAttribute("width", (svgW*1.01).toFixed(6));
+        img.setAttribute("height", (svgH*1.01).toFixed(6));
+        img.setAttribute("preserveAspectRatio", "none");
+        img.setAttribute("crossorigin", "anonymous");
+
+        bottom.appendChild(img);
+      });
     }
   }
 }
+
+// 檢查圖片是否存在
+function checkImageExists(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = url;
+  });
+}
+
 
 
 // tile → lat
@@ -1611,9 +1784,9 @@ showViewBox = function() {
   
   // zoom 改變 ==> 調整邊界、線段大小
   if (zoom != drawZoom) {
-    $("#slideObj #svgObj").find("g#world, g#nearSea path, g#LatLonLines").css("stroke-width",4/Math.pow(2, zoom-3).toFixed(3))
-    $("#slideObj #svgObj").find("g#臺灣").css("stroke-width",4/Math.pow(2, zoom-2).toFixed(3))
-    $("#slideObj #svgObj").find("g#pastPath, g#fcstPath").css("stroke-width",4/Math.pow(2, zoom-4).toFixed(3))
+    $("#slideObj #svgObj").find("g#world, g#nearSea path, g#LatLonLines").css("stroke-width",4/Math.pow(1.8, zoom-3).toFixed(3))
+    $("#slideObj #svgObj").find("g#臺灣").css("stroke-width",2/Math.pow(1.8, zoom-2).toFixed(3))
+    $("#slideObj #svgObj").find("g#pastPath, g#fcstPath").css("stroke-width",4/Math.pow(1.5, zoom-4).toFixed(3))
   }
   
   // 底圖為"衛星影像" ==> 重新拼貼衛星影像圖 (加 debounce)
@@ -1660,6 +1833,8 @@ function toggleAnimEnable() {
       console.warn("無法重啟動畫元素", this, e);
     }
   });
+  
+  initToggleDisplays()
 }
 
 
@@ -1680,4 +1855,135 @@ function toggleAnimState() {
     svg.unpauseAnimations();
     btn.setAttribute("type", "animsPlay"); // 切換為「暫停中 → 播放圖示」
   }
+}
+
+// 切換顯示
+// 切換單一元素顯示狀態
+function toggleDisplays(selector) {
+  const $el = $("#slideObj").find(selector);
+  $el.toggle();
+  return !$el.is(':hidden'); // true=顯示, false=隱藏
+}
+
+// 子元素被切換
+function toggleChild(selector, groupName) {
+  const $target = $(selector);
+  if ($target.length === 0) {
+    const $el = $(`.child-${groupName}[onclick*="${selector}"]`);
+    $el.prop("disabled", true).prop("checked", false).attr("title","元素不存在");
+    updateGroupState(groupName);
+    return false;
+  }
+
+  const state = toggleDisplays(selector);
+  updateGroupState(groupName);
+  return state;
+}
+
+// 群組全開/全關
+function toggleGroup(groupName) {
+  const $group = $(`#group-${groupName}`);
+  const $groupLi = $group.closest("li");
+  const $childUl = $groupLi.find(">ul");
+  const $targetGroup = $(`#slideObj #${groupName}`);
+
+  if ($targetGroup.length === 0) {
+    $group.prop("disabled", true).attr("title", "群組不存在");
+    $childUl.hide();
+    return;
+  }
+
+  
+  if (!$group.prop("checked")) {            // 未選取 ==> 群組隱藏
+    // console.log("群組隱藏")
+    $targetGroup.hide()
+    $childUl.hide()
+  } else {                                 // 選取 ==> 群組顯示
+    // console.log("群組顯示")
+    $targetGroup.show()
+    $childUl.show()
+    
+    const $children = $childUl.find(`.child-${groupName}:not(:disabled)`);
+    let checkedCount = $children.filter(":checked").length;
+    
+    if (checkedCount === 0) {                      // 子元素全未勾選 → 全選
+      $children.prop("checked",true)
+      $children.each((_, el) => $targetGroup.find($(el).attr("name")).show())
+    } else if (checkedCount < $children.length) {  // 子元素部分勾選 → 顯示 "indeterminate"
+      $group.prop("indeterminate", true)
+    }
+  }
+}
+
+
+// 更新群組核取方塊狀態
+function updateGroupState(groupName) {
+  const $children = $(`.child-${groupName}:not(:disabled)`);
+  const $group = $(`#group-${groupName}`);
+  const $childUl = $group.closest("li").find(">ul"); // 群組內的子元素 <ul>
+  const $targetGroup = $(`#slideObj #${groupName}`);
+
+  if ($children.length === 0) {
+    $group.prop("disabled", true).prop("checked", false).attr("title","群組元素不存在");
+    $childUl.hide(); // 沒有子元素時隱藏 <ul>
+    return;
+  }
+  
+  // if ($targetGroup.is(":hidden")) {  // 群組為隱藏狀態
+    // $group.prop("indeterminate", false).prop("checked", false);
+    // $childUl.hide();
+  // }
+
+  let checkedCount = $children.filter(":checked").length;
+
+  if (checkedCount === 0) {
+    $group.prop("indeterminate", false).prop("checked", false);
+    $targetGroup.hide()
+    $childUl.hide(); // 全部未勾選 → 隱藏 <ul>
+  } else if (checkedCount === $children.length) {
+    $group.prop("indeterminate", false).prop("checked", true);
+    $targetGroup.show()
+    $childUl.show(); // 全部勾選 → 顯示 <ul>
+  } else {
+    $group.prop("indeterminate", true).prop("checked", true);
+    $targetGroup.show()
+    $childUl.show(); // 部分勾選 → 顯示 <ul>
+  }
+}
+
+
+// 初始化核取方塊狀態
+function initToggleDisplays() {
+  $("#toggleDisplay>ul>li").each(function () {
+    const $group = $(this).find(">input"); // 群組 checkbox
+    const groupName = $group.attr("name");
+    const $childUl = $(this).find(">ul");
+    const $targetGroup = $(`#slideObj #${groupName}`);
+
+    if ($targetGroup.length === 0) {
+      $group.prop("disabled", true).attr("title", "群組不存在");
+      $childUl.hide();
+      return;
+    } else {
+      $group.prop("disabled", false).attr("title", "");
+    }
+
+    // 根據群組區塊是否顯示，設定群組 checkbox
+    $group.prop("checked", $targetGroup.is(":visible"));
+    $group.prop("indeterminate", false);
+
+    // 初始化子元素 checkbox 狀態 (依元素存在與否)
+    $(this).find("ul>li>input").each(function () {
+      const selector = $(this).attr("name");
+      const $el = $(`#slideObj ${selector}`);
+      if ($el.length === 0) {
+        $(this).prop("disabled", true).attr("title", "元素不存在");
+      } else {
+        $(this).prop("disabled", false);
+        $(this).prop("checked", !$el.is(":hidden"));
+      }
+    });
+    
+    updateGroupState(groupName)
+  });
 }

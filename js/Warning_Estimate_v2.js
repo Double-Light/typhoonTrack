@@ -109,8 +109,8 @@ get_warning_estimate = function(wEData_select, index, warningType) { // wEData_�
 
 // 讀取、計算警報資訊
 get_warning_data = function() {
-  let yName = $("select#TyList option:selected:not([disabled])").attr("name")
-  let ty_num = $("select#TyList option:selected:not([disabled])").attr("tynum") * 1
+  let yName = $("select#TyList option:selected").attr("name")
+  let ty_num = $("select#TyList option:selected").attr("tynum") * 1
   let xInitDate = $("select#trackFcstList option:selected").val() ? $("select#trackFcstList option:selected").val() : null // 預報時間 (字串，UTC，格式:"yyyy-MM-DDTHH:mm+00:00")
   let xInitDate_OBJ = moment(xInitDate) // 預報時間 (Local Time)
   let xInitDate_UTC = xInitDate_OBJ.utc().format("yyyyMMDDHHmm") // 預報時間 (字串，UTC，格式:"yyyyMMDDHHmm")
@@ -120,8 +120,8 @@ get_warning_data = function() {
   // ## Step 1: 處理已發布警報時間 (讀取TAFIS API 警報類型變更歷史記錄)
 
   // 篩選早於預報時間前的警報歷史資料
-  wHData = Warning_History.filter(item => item.cwb_ty_no === ty_num && moment(item.issue) <= xInitDate_OBJ.add(30, "minutes"));
-  // console.log(wHData);
+  wHData = window.TyphoonData.data.Warning_History.filter(item => item.cwb_ty_no === ty_num && moment(item.issue) <= xInitDate_OBJ.add(30, "minutes"));
+  console.log(wHData);
 
   if (wHData.length != 0) {
     // if 多次侵臺 => 移除前次警報歷史資訊
@@ -193,21 +193,25 @@ get_warning_data = function() {
 
   // ## Step2: 處理警報預估時間 (讀取 iTYPHOON 警報估計時間)
   // 此颱風該時間點有警報估計
-  if (yName in Warning_Estimate) {
+//  if (yName in Warning_Estimate) {
+    // 2.1 篩選該颱風警報估計資料
+//    wEData = {}
+//    if (Warning_Estimate[yName]['files'].includes(xInitDate_UTC)) {
+    if (yName && Object.prototype.hasOwnProperty.call(window.TyphoonData.data.Warning_Estimate, yName)) {
     // 2.1 篩選該颱風警報估計資料
     wEData = {}
-    if (Warning_Estimate[yName]['files'].includes(xInitDate_UTC)) {
+    if (window.TyphoonData.data.Warning_Estimate[yName]['files'].includes(xInitDate_UTC)) {
       // 篩選預報時間點警報估計資料
-      wEData = Warning_Estimate[yName]['data'][moment($("select#trackFcstList option:selected").val()).utc().format("yyyyMMDDHHmm")]['data']
+      wEData = window.TyphoonData.data.Warning_Estimate[yName]['data'][moment($("select#trackFcstList option:selected").val()).utc().format("yyyyMMDDHHmm")]['data']
       // console.log(wEData)
 
     } else {
       console.log(yName + ' 未篩選到發布於 ' + xInitDate_UTC + ' (UTC)的警報估計時間')
 
       // 篩選最後一筆警報估計資料
-      if (Warning_Estimate[yName]['files'].length > 0) {
-        wEData_lastFile = Warning_Estimate[yName]['files'][Warning_Estimate[yName]['files'].length - 1]
-        wEData = Warning_Estimate[yName]['data'][wEData_lastFile]['data']
+      if (window.TyphoonData.data.Warning_Estimate[yName]['files'].length > 0) {
+        wEData_lastFile = window.TyphoonData.data.Warning_Estimate[yName]['files'][window.TyphoonData.data.Warning_Estimate[yName]['files'].length - 1]
+        wEData = window.TyphoonData.data.Warning_Estimate[yName]['data'][wEData_lastFile]['data']
 
         alert(yName + ' 未篩選到發布於 ' + xInitDate_UTC + ' (UTC)的警報估計時間，改使用 ' + wEData_lastFile + ' 時間資料')
       }
@@ -413,9 +417,8 @@ function getInterpolatePoint(tauTime, thisData = PData, dataKeys = Object.keys(t
 
 // 繪製 警報半徑 warning_circle (計算警報位置與半徑像素)
 setWarningCircle = function() {
-  $svg = $("#slideObj #svgObj")
   // ---------- 清空既有圖層 ----------
-  $svg.find("g#warning_circle").empty();
+  $("g#warning_circle").empty();
 
   // const iconSize = 16; // 暴風中心ICON大小
 
@@ -423,11 +426,14 @@ setWarningCircle = function() {
   let xMarks = "";
 
   let Azimuth = 135; // 預設移向為西北
+
+console.log(Warning_Data)
   
   Warning_Data.forEach(warning => {
+
     if (warning.time) { // 有效時間格式再繪製
-      const {time,tau, lon, lat, ax, ay, R15_x, R15_y, R25_x, R25_y} = getInterpolatePoint(warning.time, PData,["time", "tau", "lon", "lat", "ax", "ay", "R15_x", "R15_y", "R25_x", "R25_y"])
-      
+      const {time,tau, lon, lat, ax, ay, R15, R15_x, R15_y, R25, R25_x, R25_y} = getInterpolatePoint(warning.time, PData,["time", "tau", "lon", "lat", "ax", "ay", "R15", "R15_x", "R15_y", "R25", "R25_x", "R25_y"])
+       
       // 將 ellipse 加入序列化字串 (之後一次寫入 DOM)
       xRadius += `
       <g class="${warning.time < xPData[0].time ? "mark-past" : "mark-fcst"}" name="${warning.type}">
@@ -454,14 +460,13 @@ setWarningCircle = function() {
   });
 
   // 批次寫入 ellipse
-  $svg.find("g#warning_circle").html(xRadius);
+  $("g#warning_circle").html(xRadius);
 }
 
 // 建立警報時間標記 warning_marks
 setWarningMarks = function() {
-  $svg = $("#slideObj #svgObj")
-  $svg.find("g#warning_marks").empty();
-  $svg.find("div#keypoint-mark").empty();
+  $("g#warning_marks").empty();
+  $("div#keypoint-mark").empty();
 
   let gMarks = "";
   let dMarks = "";
@@ -643,7 +648,7 @@ setWarningMarks = function() {
         }
 
         // 透過 DOM 查已經存在的舊標記 label
-        // const oldRects = $svg.find("g#warning_marks g rect").map((i, el) => el.getBBox()).get();
+        // const oldRects = $("g#warning_marks g rect").map((i, el) => el.getBBox()).get();
         // if (isBBoxIntersectAny(box, oldRects)) score -= 20;
 
         // console.log(score,angleOffset,dR);
@@ -732,8 +737,8 @@ setWarningMarks = function() {
   // console.log(placedLines);
 
   // 批次寫入 g#warning_marks
-  $svg.find("g#warning_marks").html(gMarks);
-  $svg.find("g#warning_marks").css("font-size",fontSize)
+  $("g#warning_marks").html(gMarks);
+  $("g#warning_marks").css("font-size",fontSize)
 
 
   // console.log(bestPlacement);
@@ -831,8 +836,8 @@ setWarningMarks = function() {
 }
 
 // 調整警報時間標記 warning_marks 大小
+
 setWarningMarksSize = function(fontSize = 9, markName = "") {
-  $svg = $("#slideObj #svgObj")
   const ConnectorItem = [
     [-0.5, 0],  // 上
     [0, -0.5],  // 左
@@ -840,7 +845,7 @@ setWarningMarksSize = function(fontSize = 9, markName = "") {
     [-1, -0.5]  // 右
   ];
   
-  $svg.find(`#warning_marks > g${markName ==="" ? "" : "[name='"+markName+"']"}`).each(function() {
+  $(`#warning_marks > g${markName ==="" ? "" : "[name='"+markName+"']"}`).each(function() {
     const connectLine = $(this).find("line");
 
     // 讀取 line 的起點、ConnectorType
@@ -877,32 +882,79 @@ setWarningMarksSize = function(fontSize = 9, markName = "") {
     // $(this).find("text tspan").last().attr("dy",lineHeight)
     $(this).find("text tspan").not($(this).find("text tspan").first()).attr("dy",lineHeight) // 設定非第一個<tspan> dy
 
-    // $svg.find("g#warning_marks")
-      // .css("font-size", fontSize)
-      // .css("stroke-width", fontSize / 10);
+    $("g#warning_marks")
+      .css("font-size", fontSize)
+      .css("stroke-width", fontSize / 10);
 
-    // $svg.find("#g_tc_timestr text")
-      // .css("font-size", (fontSize * 0.75).toFixed(2));
+    $("#g_tc_timestr text")
+      .css("font-size", (fontSize * 0.75).toFixed(2));
   });
   
-  // 設定 warning_marks 的字體大小與線寬
-  $svg.find("g#warning_marks")
-    .attr("font-size", fontSize)   // SVG 相容性更好
-    .css("font-size", fontSize)    // 現代瀏覽器可吃
-    .attr("stroke-width", fontSize / 10)
-    .css("stroke-width", fontSize / 10);
-
-  // 設定時間文字區
-  $svg.find("#g_tc_timestr text")
-    .css("font-size", (fontSize * 0.75).toFixed(2))
-    .attr("font-size", (fontSize * 0.75).toFixed(2));
-
-  
-  if ($svg.find(`#warning_marks > g${markName ==="" ? "" : "[name='"+markName+"']"}`).length) {
+  if ($(`#warning_marks > g${markName ==="" ? "" : "[name='"+markName+"']"}`).length) {
     // 設定 SVG 大小位置
     change_SVG_Size()
   }
 }
+
+
+/*
+setWarningMarksSize = function(fontSize = 9, markName = "") {
+  $(`#warning_marks > g${markName ==="" ? "" : "[name='"+markName+"']"}`).each(function() {
+    const connectLine = $(this).find("line");
+
+    // 讀取 line 的起點、ConnectorType
+    const ConnX = parseFloat(connectLine.attr("x1"));
+    const ConnY = parseFloat(connectLine.attr("y1"));
+    const ConnectorType= parseFloat(connectLine.attr("connectortype"));
+
+    const ConnectorItem = [
+      [-0.5, 0], // 上
+      [0, -0.5], // 左
+      [-0.5, -1], // 下
+      [-1, -0.5] // 右
+    ];
+    
+    // 建立描述文字字串 (用於決定 label寬度與高度)
+    let tspans = $("g#warning_marks g[name='warning_center_contact'] text tspan").map((_,el)=>$(el).text()).get()
+    let textMaxLen = Math.max(...tspans.map(t=>[...t].reduce((len,ch)=>len+(/[\u0000-\u00ff]/.test(ch)?0.5:1),0)));
+
+    // console.log("最大加權字數：", textMaxLen);
+    const lines = $(this).find("text").find("tspan").length;
+
+    // 計算寬高
+    const labelWidth = fontSize * (textMaxLen+2);
+    const labelHeight = fontSize * (tspans.length+1);
+    const lineHeight = roundTo(fontSize * lineHeightScale,2);  // 行高
+
+
+    // 計算 label 的左上角位置
+    const labelX = roundTo(ConnX + labelWidth * ConnectorItem[ConnectorType - 1][0], 2);
+    const labelY = roundTo(ConnY + labelHeight * ConnectorItem[ConnectorType - 1][1], 2);
+
+    // console.log($(this).attr("name"),ConnX,ConnY,ConnectorItem[ConnectorType - 1],labelX,labelY);
+
+    // 文字垂直置中起點
+    const textHeight = lineHeight * lines;
+    const textStartY = roundTo(labelY + (labelHeight - textHeight) / 2 + fontSize,2); // 修正基線位置
+
+    $(this).find("rect").attr("x",labelX).attr("y",labelY).attr("width",labelWidth).attr("height",labelHeight)
+    $(this).find("text").attr("x",labelX + labelWidth / 2).attr("y",textStartY)
+    $(this).find("text").find("tspan").attr("x",labelX + labelWidth / 2)
+    // $(this).find("text").find("tspan").last().attr("dy",lineHeight)
+    $(this).find("text").find("tspan").not($(this).find("text").find("tspan").first()).attr("dy",lineHeight) // 設定非第一個<tspan> dy
+
+    $("g#warning_marks")
+      .css("font-size", fontSize)
+      .css("stroke-width", fontSize / 10);
+
+    $("#g_tc_timestr text")
+      .css("font-size", (fontSize * 0.75).toFixed(2));
+  });
+  
+  // 設定 SVG 大小位置
+  change_SVG_Size()
+}
+*/
 
 // 建立動畫參數
 function getTcAniDatas (aniStartTau = 0,aniEndTau = xPData[xPData.length-1]['tau']) {
@@ -954,10 +1006,10 @@ function getTcAniDatas (aniStartTau = 0,aniEndTau = xPData[xPData.length-1]['tau
 
 
 // 建立暴風半徑動畫
-function setTcAnimate (aniType="all", $svg=$("#slideObj #svgObj")) {
-  $svg.find("g#tc_circle").contents().remove();
-  $svg.find("#warning_marks >g animate").remove();            // 移除所有標記顯示/隱藏動畫
-  $svg.find("#warning_marks .mark-fcst").css("opacity", "");  // 預報時段標記全顯示
+function setTcAnimate (aniType="all") {
+  $("g#tc_circle").contents().remove();
+  $("#warning_marks >g animate").remove();            // 移除所有標記顯示/隱藏動畫
+  $("#warning_marks .mark-fcst").css("opacity", "");  // 預報時段標記全顯示
 
   let xRadius = ""
 
@@ -971,8 +1023,8 @@ function setTcAnimate (aniType="all", $svg=$("#slideObj #svgObj")) {
     // console.log(aniType)
     
     if (aniType == "all") {  // 全預報時段動畫
-      // $svg.find("#warning_marks .mark-fcst").show() // 預報時段標記全顯示
-      $svg.find("#keypoint .warning-text").removeClass("active")
+      // $("#warning_marks .mark-fcst").show() // 預報時段標記全顯示
+      $("#keypoint .warning-text").removeClass("active")
     } else {                 // 區段動畫
       // aniStartTau = Math.max(warning_data.find(item => item.type === aniType).tau,0)
       // aniStartTau = warning_data.find(item => item.type === aniType).tau 
@@ -992,11 +1044,11 @@ function setTcAnimate (aniType="all", $svg=$("#slideObj #svgObj")) {
       }
       
       // 只顯示該時間點預報標記
-      // $svg.find("#warning_marks .mark-fcst").hide()
-      // $svg.find(`#warning_marks .mark-fcst[name='${aniType}']`).show()
-      $svg.find("#warning_marks .mark-fcst").css("opacity", "0");  // 預報時段標記全隱藏
-      $svg.find("#keypoint .warning-text").removeClass("active")
-      $svg.find(`#keypoint .warning-text[name='${aniType}']`).addClass("active")
+      // $("#warning_marks .mark-fcst").hide()
+      // $(`#warning_marks .mark-fcst[name='${aniType}']`).show()
+      $("#warning_marks .mark-fcst").css("opacity", "0");  // 預報時段標記全隱藏
+      $("#keypoint .warning-text").removeClass("active")
+      $(`#keypoint .warning-text[name='${aniType}']`).addClass("active")
     }
     
     // console.log(aniType,aniStartTau,aniEndTau);
@@ -1090,7 +1142,7 @@ function setTcAnimate (aniType="all", $svg=$("#slideObj #svgObj")) {
     // 建立標記動畫
     Warning_Data.forEach(item => {
       if (item.tau >= 0 && item.tau > aniStartTau && item.tau <= aniEndTau && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
-        const $target = $svg.find(`#warning_marks g.mark-fcst[name='${item.type}']`);
+        const $target = $(`#warning_marks g.mark-fcst[name='${item.type}']`);
         
         if ($target.length > 0) {
           // 建立 SVG animate 元素
@@ -1118,7 +1170,7 @@ function setTcAnimate (aniType="all", $svg=$("#slideObj #svgObj")) {
     
   } else {  // 靜態模式
     // console.log("靜態模式")
-    let tauTime = parseFloat($svg.find("g#tc_circle").attr("tau") || 0);
+    let tauTime = parseFloat($("g#tc_circle").attr("tau") || 0);
 
     let time, ax, ay, R15_x, R15_y, R25_x, R25_y;  // 👈 提前宣告
 
@@ -1126,9 +1178,9 @@ function setTcAnimate (aniType="all", $svg=$("#slideObj #svgObj")) {
       // console.log("全預報時段動畫");
       tauTime = xPData[0].tau;
       ({ time, ax, ay, R15_x, R15_y, R25_x, R25_y } = xPData[0]);
-      // $svg.find("#warning_marks .mark-fcst").show() // 預報時段標記全顯示
-      $svg.find("#warning_marks .mark-fcst").css("opacity", "");  // 預報時段標記全顯示
-      $svg.find("#keypoint .warning-text").removeClass("active")
+      // $("#warning_marks .mark-fcst").show() // 預報時段標記全顯示
+      $("#warning_marks .mark-fcst").css("opacity", "");  // 預報時段標記全顯示
+      $("#keypoint .warning-text").removeClass("active")
     } else if (aniType === "go-back-point" || aniType === "go-next-point") {
       tauRange = aniType === "go-back-point"
         ? [Math.max(Math.ceil(tauTime - 1),PData[0].tau), tauTime]
@@ -1147,14 +1199,14 @@ function setTcAnimate (aniType="all", $svg=$("#slideObj #svgObj")) {
 
       ({time, ax, ay, R15_x, R15_y, R25_x, R25_y} = getInterpolatePoint(tauTime, PData,["time", "ax", "ay", "R15_x", "R15_y", "R25_x", "R25_y"]))
       
-      // $svg.find("#warning_marks .mark-fcst").hide()
-      $svg.find("#warning_marks .mark-fcst").css("opacity", "0")
-      $svg.find("#keypoint .warning-text").removeClass("active")
+      // $("#warning_marks .mark-fcst").hide()
+      $("#warning_marks .mark-fcst").css("opacity", "0")
+      $("#keypoint .warning-text").removeClass("active")
       Warning_Data.forEach(item => {
         if (item.tau == tauTime && $(`#warning_estimate_list .warning-group[name='${item.type}'] .warning-check`).prop("checked")) {
-          // $svg.find(`#warning_marks .mark-fcst[name='${item.type}']`).show()
-          $svg.find(`#warning_marks .mark-fcst[name='${item.type}']`).css("opacity", "")
-          $svg.find(`#keypoint .warning-text[name='${item.type}']`).addClass("active")
+          // $(`#warning_marks .mark-fcst[name='${item.type}']`).show()
+          $(`#warning_marks .mark-fcst[name='${item.type}']`).css("opacity", "")
+          $(`#keypoint .warning-text[name='${item.type}']`).addClass("active")
         }
       });
     } else {
@@ -1165,15 +1217,15 @@ function setTcAnimate (aniType="all", $svg=$("#slideObj #svgObj")) {
       }
       
       // 只顯示該時間點預報標記
-      // $svg.find("#warning_marks .mark-fcst").hide()
-      // $svg.find(`#warning_marks .mark-fcst[name='${aniType}']`).show()
-      $svg.find("#warning_marks .mark-fcst").css("opacity", "0");  // 預報時段標記全隱藏
-      $svg.find(`#warning_marks .mark-fcst[name='${aniType}']`).css("opacity", "")
-      $svg.find("#keypoint .warning-text").removeClass("active")
-      $svg.find(`#keypoint .warning-text[name='${aniType}']`).addClass("active")
+      // $("#warning_marks .mark-fcst").hide()
+      // $(`#warning_marks .mark-fcst[name='${aniType}']`).show()
+      $("#warning_marks .mark-fcst").css("opacity", "0");  // 預報時段標記全隱藏
+      $(`#warning_marks .mark-fcst[name='${aniType}']`).css("opacity", "")
+      $("#keypoint .warning-text").removeClass("active")
+      $(`#keypoint .warning-text[name='${aniType}']`).addClass("active")
     }
 
-    $svg.find("g#tc_circle").attr("tau", tauTime);
+    $("g#tc_circle").attr("tau", tauTime);
     xRadius = `
       <g id="g_tc_R15">
         <ellipse id="tc_R15" cx="${ax}" cy="${ay}" rx="${R15_x}" ry="${R15_y}" ${tauTime>=0 ? 'stroke="#F00" fill="#FFC9C9B3"' : 'stroke="#808080" fill="#FFFCE7B3"'} stroke-width="1.0"></ellipse>
@@ -1184,20 +1236,19 @@ function setTcAnimate (aniType="all", $svg=$("#slideObj #svgObj")) {
       <g id="g_tc_center">
         <use id="tc_center" x="${ax}" y="${ay}" href="${tauTime>=0 ? '#tyIcon_fcst' : '#tyIcon_past'}"></use>
       </g>
-      <g id="g_tc_timestr" style="transform: translate(${R15_x*0.25}px, ${R15_y*0.25}px); ${$("select#map_theme_type option:selected").val() === "Satellite_Map" ? "fill: #FFF" :"fill: #000"}">
-        <text x="${ax}" y="${ay}" style="font-size: ${parseFloat(parseInt($svg.find("#warning_marks").css("font-size"))*0.75,2)}px;"><tspan>${moment(time).format('DD日HH時mm分').replace("00分", "")}</tspan></text>
+      <g id="g_tc_timestr" style="transform: translate(${R15_x*0.25}px, ${R15_y*0.25}px);">
+        <text x="${ax}" y="${ay}" style="font-size: ${parseFloat(parseInt($("#warning_marks").css("font-size"))*0.75,2)}px;"><tspan>${moment(time).format('DD日HH時mm分').replace("00分", "")}</tspan></text>
       </g>`;
   }
-  $svg.find("g#tc_circle").html(xRadius)
+  $("g#tc_circle").html(xRadius)
 }
 
 // 繪製TcCircle
-function setTcCircle(tauTime=0 , $svg=$("#slideObj #svgObj"), showAllMarks = false, highlight = false) {
-  
+function setTcCircle(tauTime=0 ,$svg=$("svg#svgObj"), showAllMarks = false, highlight = false) {
   if (PData.length > 0) {
-    $svg.find("g#tc_circle").contents().remove();
-    $svg.find("#warning_marks >g animate").remove();            // 移除所有標記顯示/隱藏動畫
-    $svg.find("#warning_marks .mark-fcst").css("opacity", "");  // 預報時段標記全顯示
+    $("g#tc_circle").contents().remove();
+    $("#warning_marks >g animate").remove();            // 移除所有標記顯示/隱藏動畫
+    $("#warning_marks .mark-fcst").css("opacity", "");  // 預報時段標記全顯示
     
     $svg.find("g#tc_circle").contents().remove();
     let xRadius = ""
@@ -1425,6 +1476,61 @@ $(function () {
 
 
 // 建立警報相關設定 (Warning_Data)
+async function gen_warning() {
+  $("#warning_estimate_list").contents().remove();
+  $("#keypoint-content").contents().remove();
+  $("#keypoint").removeAttr("style");
+  $("#keypoint").attr("style", "left:18px;");
+  
+  let FcstTime = moment($("select#trackFcstList option:selected").val()) // 預報時間
+
+  Warning_Data = await get_warning_data(); // <--- 加上 await
+
+  if (Warning_Data.filter(data => data.time != "").length === 0) {
+    $("#warning_estimate_list").html('<div><span style="color:#f44336;">未接觸臺灣近海</span></div>');
+    $("#keypoint").hide();
+    change_SVG_Size()
+  } else {
+    // 設定警報時間預估(LST)選單
+    Warning_Data.forEach(item => {
+      if (item['source'] === 'TAFIS_Warning_History' || (moment(item['time']) < FcstTime && item['source'] != 'Self_Editing')) { // 已發布 --> 鎖定編輯
+        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><input class="warning-text" value="${item["text"]}" onchange="changeWarning($(this).closest('.warning-group'), 'changeText')"><span>：</span><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'), 'changeTime')" disabled><div class="warning-adjust-btn"><button onclick="incrementHour(this)" disabled>▲</button><button onclick="decrementHour(this)" disabled>▼</button></div></div>`);
+      } else if (item['time'] === '') { // 無時間 --> 取消勾選
+        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value=""><input class="warning-text" value="${item["text"]}" onchange="changeWarning($(this).closest('.warning-group'), 'changeText')"><span>：</span><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'), 'changeTime')"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
+      } else {
+        $("#warning_estimate_list").append(`<div class="warning-group" name="${item["type"]}" source="${item["source"]}"><input class="warning-check" type="checkbox" onclick="showHideKeypoint(this)" value="" checked><input class="warning-text" value="${item["text"]}" onchange="changeWarning($(this).closest('.warning-group'), 'changeText')"><span>：</span><input class="warning-time" value="${item["time"]}" onchange="changeWarning($(this).closest('.warning-group'), 'changeTime')"><div class="warning-adjust-btn"><button onclick="incrementHour(this)">▲</button><button onclick="decrementHour(this)">▼</button></div></div>`);
+      }
+    });
+    
+    // 設定 warning-text 寬度
+    $(".warning-group .warning-text").css("width",(Math.max(...warning_data.map(item => item.text.length)))*parseFloat($(".warning-group .warning-text").css("font-size")))
+
+    // 設定重要時間點keypoint-content
+    setKeypointContent()
+
+    // 繪製 警報半徑 warning_circle
+    setWarningCircle()
+    setWarningMarks()
+
+    // 設定 keypoint 拖動
+    // const enable = $("#slideShps").hasClass("editable")
+    // console.log(enable)
+    // setEditModel(enable)
+
+    $("#keypoint").show();
+  }
+  
+  // 暴風半徑動畫
+  setTcAnimate()
+  
+  // 重設編輯模式
+  setEditModel()
+};
+
+
+
+/*
+// 建立警報相關設定 (Warning_Data)
 gen_warning = function() {
   $("#warning_estimate_list").contents().remove();
   $("#keypoint-content").contents().remove();
@@ -1475,4 +1581,4 @@ gen_warning = function() {
   // 重設編輯模式
   setEditModel()
 };
-
+*/
