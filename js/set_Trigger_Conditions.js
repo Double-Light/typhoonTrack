@@ -1630,9 +1630,9 @@ function chooseZoom(widthPx, heightPx, west, east, south, north) {
 
 // 已繪製的 tile 集合
 let drawnTiles = new Set();
-let drawZoom = null;
+let drawZoom = null ;
 
-async function drawGoogleTiles(Domain_Range) {
+function drawGoogleTiles(Domain_Range) {
   const bottom = document.querySelector("g#myMap g#bottom");
   if (!bottom) return;
 
@@ -1663,7 +1663,6 @@ async function drawGoogleTiles(Domain_Range) {
   const yTop = Math.min(y1, y2);
   const yBottom = Math.max(y1, y2);
 
-  // 雙層 for 迴圈使用 await，確保同步順序
   for (let x = x1; x <= x2; x++) {
     for (let y = yTop; y <= yBottom; y++) {
       const key = `${zoom}_${x}_${y}`;
@@ -1673,15 +1672,9 @@ async function drawGoogleTiles(Domain_Range) {
       // 嘗試先使用本地瓦片
       const localUrl = `./data/khms3/${zoom}/${x}/${y}.jpg`;
       const remoteUrl = `https://khms3.google.com/kh/v=1000&x=${x}&y=${y}&z=${zoom}`;
-
-      const exists = await checkImageExists(localUrl);
-      const url = exists ? localUrl : remoteUrl;
-
-      const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
-      img.setAttribute("href", url);
-
+      
       const tileLeftLon   = x / Math.pow(2, zoom) * 360 - 180;
-      const tileRightLon  = (x + 1) / Math.pow(2, zoom) * 360 - 180;
+      const tileRightLon  = (x+1) / Math.pow(2, zoom) * 360 - 180;
       const tileTopLat    = tile2lat(y, zoom);
       const tileBottomLat = tile2lat(y + 1, zoom);
 
@@ -1690,26 +1683,26 @@ async function drawGoogleTiles(Domain_Range) {
       const svgW = (tileRightLon - tileLeftLon) / (east - west) * vbWidth;
       const svgH = (tileTopLat - tileBottomLat) / (north - south) * vbHeight;
 
-      img.setAttribute("x", svgX.toFixed(6));
-      img.setAttribute("y", svgY.toFixed(6));
-      img.setAttribute("width", (svgW * 1.01).toFixed(6));
-      img.setAttribute("height", (svgH * 1.01).toFixed(6));
-      img.setAttribute("preserveAspectRatio", "none");
-      img.setAttribute("crossorigin", "anonymous");
+      // 檢查本地瓦片是否存在
+      checkImageExists(localUrl).then(exists => {
+        const url = exists ? localUrl : remoteUrl;
 
-      bottom.appendChild(img);
+        const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+        img.setAttribute("href", url);
 
-      // 等待圖片實際載入完成後再畫下一張
-      await new Promise((resolve) => {
-        img.onload = resolve;
-        img.onerror = resolve; // 即使載入失敗也繼續
+
+        img.setAttribute("x", svgX.toFixed(6));
+        img.setAttribute("y", svgY.toFixed(6));
+        img.setAttribute("width", (svgW*1.01).toFixed(6));
+        img.setAttribute("height", (svgH*1.01).toFixed(6));
+        img.setAttribute("preserveAspectRatio", "none");
+        img.setAttribute("crossorigin", "anonymous");
+
+        bottom.appendChild(img);
       });
     }
   }
-
-  // console.log("所有瓦片載入完成");
 }
-
 
 // 檢查圖片是否存在
 function checkImageExists(url) {
